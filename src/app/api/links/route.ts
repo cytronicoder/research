@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { kv } from "@vercel/kv";
+import { getRedisClient } from "@/lib/redis";
 
 export const runtime = "edge";
 
@@ -23,9 +23,10 @@ export async function PUT(req: NextRequest) {
       { status: 400 }
     );
 
+  const redis = await getRedisClient();
   const key = slug.toLowerCase().replace(/^\//, "");
-  await kv.set(`link:${key}`, target);
-  await kv.hset(`meta:${key}`, { permanent: !!permanent });
+  await redis.set(`link:${key}`, target);
+  await redis.hSet(`meta:${key}`, { permanent: !!permanent ? "1" : "0" });
 
   const origin = new URL(req.url).origin;
   return NextResponse.json({ slug: key, short: `${origin}/${key}`, target });
@@ -35,21 +36,21 @@ export async function GET(req: NextRequest) {
   // read link + stats (also protected)
   if (req.headers.get("x-admin-key") !== process.env.ADMIN_KEY)
     return unauthorized();
+  const redis = await getRedisClient();
   const { searchParams } = new URL(req.url);
   const slug = (searchParams.get("slug") || "").toLowerCase();
-  const target = slug ? await kv.get<string>(`link:${slug}`) : null;
-  const clicks = slug
-    ? Number((await kv.get<number>(`count:${slug}`)) || 0)
-    : null;
+  const target = slug ? await redis.get(`link:${slug}`) : null;
+  const clicks = slug ? Number((await redis.get(`count:${slug}`)) || 0) : null;
   return NextResponse.json({ slug, target, clicks });
 }
 
 export async function DELETE(req: NextRequest) {
   if (req.headers.get("x-admin-key") !== process.env.ADMIN_KEY)
     return unauthorized();
+  const redis = await getRedisClient();
   const { searchParams } = new URL(req.url);
   const slug = (searchParams.get("slug") || "").toLowerCase();
-  await kv.del(`link:${slug}`);
-  await kv.del(`count:${slug}`);
+  await redis.del(`link:${slug}`);
+  await redis.del(`count:${slug}`);
   return NextResponse.json({ deleted: slug });
 }

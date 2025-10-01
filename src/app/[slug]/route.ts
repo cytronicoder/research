@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { kv } from "@vercel/kv";
+import { getRedisClient } from "@/lib/redis";
 
 export const runtime = "edge";
 
@@ -11,16 +11,17 @@ export async function GET(
   const slug = (slugParam || "").trim().toLowerCase();
   if (!slug) return new NextResponse("OK", { status: 200 });
 
-  const target = await kv.get<string>(`link:${slug}`);
+  const redis = await getRedisClient();
+  const target = await redis.get(`link:${slug}`);
   if (!target)
     return new NextResponse("Not found", {
       status: 404,
       headers: { "X-Robots-Tag": "noindex" },
     });
 
-  // count click (best-effort; don’t block redirect if it fails)
+  // count click (best-effort; don't block redirect if it fails)
   try {
-    await kv.incr(`count:${slug}`);
+    await redis.incr(`count:${slug}`);
   } catch {}
 
   const res = NextResponse.redirect(target, 301);
