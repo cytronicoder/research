@@ -5,9 +5,10 @@ export const runtime = "edge";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
-  const slug = (params.slug || "").trim().toLowerCase();
+  const { slug: slugParam } = await params;
+  const slug = (slugParam || "").trim().toLowerCase();
   if (!slug) return new NextResponse("OK", { status: 200 });
 
   const target = await kv.get<string>(`link:${slug}`);
