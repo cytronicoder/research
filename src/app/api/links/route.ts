@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRedisClient } from "@/lib/redis";
 
-export const runtime = "edge";
-
 function unauthorized() {
   return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 }

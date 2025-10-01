@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRedisClient } from "@/lib/redis";
 
-export const runtime = "edge";
-
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
