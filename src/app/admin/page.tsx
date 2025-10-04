@@ -152,8 +152,8 @@ export default function AdminDashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
-            <div className="max-w-7xl w-full mx-auto px-4 py-12 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+            <div className="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
                 <header className="flex justify-between items-center mb-12">
                     <div>
                         <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-2">
