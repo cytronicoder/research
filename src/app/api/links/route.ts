@@ -9,7 +9,8 @@ export async function PUT(req: NextRequest) {
   if (req.headers.get("x-admin-key") !== process.env.ADMIN_KEY)
     return unauthorized();
 
-  const { slug, target, permanent, title, description, tags } = await req.json();
+  const { slug, target, permanent, title, description, tags } =
+    await req.json();
   if (!slug || !target)
     return NextResponse.json(
       { error: "slug and target required" },
@@ -24,23 +25,22 @@ export async function PUT(req: NextRequest) {
   const redis = await getRedisClient();
   const key = slug.toLowerCase().replace(/^\//, "");
   await redis.set(`link:${key}`, target);
-  
-  // Store metadata including new fields
+
   const metadata: Record<string, string> = {
     permanent: !!permanent ? "1" : "0",
     createdAt: new Date().toISOString(),
   };
-  
+
   if (title) metadata.title = title;
   if (description) metadata.description = description;
   if (tags) metadata.tags = Array.isArray(tags) ? tags.join(",") : tags;
-  
+
   await redis.hSet(`meta:${key}`, metadata);
 
   const origin = new URL(req.url).origin;
-  return NextResponse.json({ 
-    slug: key, 
-    short: `${origin}/${key}`, 
+  return NextResponse.json({
+    slug: key,
+    short: `${origin}/${key}`,
     target,
     title: metadata.title,
     description: metadata.description,
@@ -49,7 +49,6 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  // read link + stats (also protected)
   if (req.headers.get("x-admin-key") !== process.env.ADMIN_KEY)
     return unauthorized();
   const redis = await getRedisClient();
@@ -57,8 +56,7 @@ export async function GET(req: NextRequest) {
   const slug = (searchParams.get("slug") || "").toLowerCase();
   const target = slug ? await redis.get(`link:${slug}`) : null;
   const clicks = slug ? Number((await redis.get(`count:${slug}`)) || 0) : null;
-  
-  // Fetch metadata
+
   let metadata = null;
   if (slug) {
     const meta = await redis.hGetAll(`meta:${slug}`);
@@ -70,7 +68,7 @@ export async function GET(req: NextRequest) {
       createdAt: meta.createdAt || null,
     };
   }
-  
+
   return NextResponse.json({ slug, target, clicks, metadata });
 }
 

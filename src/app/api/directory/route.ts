@@ -4,20 +4,15 @@ import { getRedisClient } from "@/lib/redis";
 export async function GET() {
   try {
     const redis = await getRedisClient();
-    
-    // Get all keys that match the pattern "link:*"
     const keys = await redis.keys("link:*");
-    
-    // Fetch all links and their click counts
+
     const links = await Promise.all(
       keys.map(async (key) => {
         const slug = key.replace("link:", "");
         const target = await redis.get(key);
         const clicks = Number((await redis.get(`count:${slug}`)) || 0);
-        
-        // Fetch metadata
         const meta = await redis.hGetAll(`meta:${slug}`);
-        
+
         return {
           slug,
           target,
@@ -31,8 +26,11 @@ export async function GET() {
       })
     );
 
-    // Sort by clicks descending
-    links.sort((a, b) => b.clicks - a.clicks);
+    links.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
 
     return NextResponse.json({ links, total: links.length });
   } catch (error) {
