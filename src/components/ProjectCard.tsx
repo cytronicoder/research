@@ -72,11 +72,10 @@ export default function ProjectCard({
                             {tags.map((tag) => (
                                 <span
                                     key={tag}
-                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                        highlights.some(h => tag.toLowerCase().includes(h.toLowerCase()))
+                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${highlights.some(h => tag.toLowerCase().includes(h.toLowerCase()))
                                             ? 'bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200'
                                             : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
-                                    }`}
+                                        }`}
                                 >
                                     {tag}
                                 </span>

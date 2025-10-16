@@ -37,7 +37,9 @@ interface LinkItem {
 
 import { getRedisClient } from "./redis";
 
-export async function getOpenReviewSubmissions(userId: string): Promise<LinkItem[]> {
+export async function getOpenReviewSubmissions(
+  userId: string
+): Promise<LinkItem[]> {
   if (!userId) {
     return [];
   }
@@ -47,13 +49,16 @@ export async function getOpenReviewSubmissions(userId: string): Promise<LinkItem
       `https://api.openreview.net/profiles?id=${encodeURIComponent(userId)}`,
       {
         headers: {
-          'User-Agent': 'research-site/1.0',
+          "User-Agent": "research-site/1.0",
         },
       }
     );
 
     if (!profileResponse.ok) {
-      console.error("Error fetching OpenReview profile:", profileResponse.statusText);
+      console.error(
+        "Error fetching OpenReview profile:",
+        profileResponse.statusText
+      );
       return [];
     }
 
@@ -66,16 +71,21 @@ export async function getOpenReviewSubmissions(userId: string): Promise<LinkItem
     const profileId = profileData.profiles[0].id;
 
     const notesResponse = await fetch(
-      `https://api.openreview.net/notes?signature=${encodeURIComponent(profileId)}&details=replyCount,original&sort=cdate:desc`,
+      `https://api.openreview.net/notes?signature=${encodeURIComponent(
+        profileId
+      )}&details=replyCount,original&sort=cdate:desc`,
       {
         headers: {
-          'User-Agent': 'research-site/1.0',
+          "User-Agent": "research-site/1.0",
         },
       }
     );
 
     if (!notesResponse.ok) {
-      console.error("Error fetching OpenReview notes:", notesResponse.statusText);
+      console.error(
+        "Error fetching OpenReview notes:",
+        notesResponse.statusText
+      );
       return [];
     }
 
@@ -85,9 +95,11 @@ export async function getOpenReviewSubmissions(userId: string): Promise<LinkItem
     const submissions = await Promise.all(
       notesData.notes
         .filter((note: OpenReviewNote) => {
-          return note.invitation.includes('/-/Submission') ||
-                 note.invitation.includes('/-/Blind_Submission') ||
-                 note.invitation.includes('/-/Paper');
+          return (
+            note.invitation.includes("/-/Submission") ||
+            note.invitation.includes("/-/Blind_Submission") ||
+            note.invitation.includes("/-/Paper")
+          );
         })
         .map(async (note: OpenReviewNote) => {
           const slug = `openreview-${note.id}`;
@@ -97,11 +109,16 @@ export async function getOpenReviewSubmissions(userId: string): Promise<LinkItem
           if (hasStoredMeta) {
             return {
               slug,
-              target: (await redis.get(`link:${slug}`)) || `https://openreview.net/forum?id=${note.id}`,
+              target:
+                (await redis.get(`link:${slug}`)) ||
+                `https://openreview.net/forum?id=${note.id}`,
               shortUrl: `/${slug}`,
               title: storedMeta.title || note.content.title,
-              description: storedMeta.description || note.content.abstract || null,
-              tags: storedMeta.tags ? storedMeta.tags.split(",") : [note.content.venue || 'OpenReview'].filter(Boolean),
+              description:
+                storedMeta.description || note.content.abstract || null,
+              tags: storedMeta.tags
+                ? storedMeta.tags.split(",")
+                : [note.content.venue || "OpenReview"].filter(Boolean),
               source: "openreview" as const,
               clicks: Number((await redis.get(`count:${slug}`)) || 0),
               createdAt: storedMeta.createdAt || null,
@@ -123,7 +140,7 @@ export async function getOpenReviewSubmissions(userId: string): Promise<LinkItem
               metadata.description = note.content.abstract;
             }
 
-            const tags = [note.content.venue || 'OpenReview'].filter(Boolean);
+            const tags = [note.content.venue || "OpenReview"].filter(Boolean);
             if (tags.length > 0) {
               metadata.tags = tags.join(",");
             }
