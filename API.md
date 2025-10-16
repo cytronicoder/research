@@ -183,6 +183,24 @@ The slug for OpenReview entries follows the pattern `openreview-{note-id}`, wher
 
 To enable OpenReview integration, set the `OPENREVIEW_USER_ID` environment variable to your OpenReview profile ID (usually your email address or tilde ID like `~First_Last1`).
 
+#### Authentication for Private Submissions
+
+If you want to access your private or in-review OpenReview submissions, you need to authenticate by setting these additional environment variables:
+
+```env
+OPENREVIEW_USERNAME=your-email@example.com
+OPENREVIEW_PASSWORD=your-password
+```
+
+Without authentication, only publicly visible submissions will be fetched. With authentication, you'll be able to see:
+
+- Papers currently under review
+- Private submissions
+- Papers in venues where you have author permissions
+- All public submissions
+
+**Security Note:** These credentials are only used server-side during build time and are never exposed to the client.
+
 ## Tag Management
 
 You can manage tags across entries using the tags API endpoint. This includes renaming tags, removing tags, and bulk operations for adding/removing tags from multiple entries.

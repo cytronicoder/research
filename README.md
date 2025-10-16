@@ -45,13 +45,17 @@ To install and run your own instance:
    ADMIN_KEY=your-secure-admin-key
    ORCID_ID=your-orcid-id
    OPENREVIEW_USER_ID=your-openreview-profile-id
+   OPENREVIEW_USERNAME=your-openreview-email
+   OPENREVIEW_PASSWORD=your-openreview-password
    ```
 
    For my project, I am taking advantage of [Vercel's Redis integration](https://vercel.com/integrations/redis). It's pretty straightforward to [set up](https://redis.io/docs/latest/operate/rc/cloud-integrations/vercel/).
 
    This project also allows you to optionally link your [ORCID](https://orcid.org/) profile by providing your ORCID ID. This will display your ORCID information on the homepage.
 
-   Additionally, you can integrate with [OpenReview](https://openreview.net/) by providing your OpenReview user ID (usually your email or tilde ID like `~First_Last1`). This will automatically fetch and display your conference submissions from OpenReview-powered conferences.
+   Additionally, you can integrate with [OpenReview](https://openreview.net/) by providing your OpenReview user ID (usually your email or tilde ID like `~First_Last1`).
+
+   **For private/in-review submissions:** If you want to access your private OpenReview submissions (papers under review), you'll also need to provide your OpenReview login credentials via `OPENREVIEW_USERNAME` and `OPENREVIEW_PASSWORD`. Without authentication, only publicly visible submissions will be fetched.
 
 Now, start the development server:
 

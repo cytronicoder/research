@@ -37,6 +37,35 @@ interface LinkItem {
 
 import { getRedisClient } from "./redis";
 
+async function getAuthToken(
+  username: string,
+  password: string
+): Promise<string | null> {
+  try {
+    const response = await fetch("https://api2.openreview.net/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username, password }),
+    });
+
+    if (!response.ok) {
+      console.error(
+        "Error authenticating with OpenReview:",
+        response.statusText
+      );
+      return null;
+    }
+
+    const data = await response.json();
+    return data.token;
+  } catch (error) {
+    console.error("Error getting OpenReview auth token:", error);
+    return null;
+  }
+}
+
 export async function getOpenReviewSubmissions(
   userId: string
 ): Promise<LinkItem[]> {
@@ -45,13 +74,31 @@ export async function getOpenReviewSubmissions(
   }
 
   try {
-    const profileResponse = await fetch(
-      `https://api.openreview.net/profiles?id=${encodeURIComponent(userId)}`,
-      {
-        headers: {
-          "User-Agent": "research-site/1.0",
-        },
+    const username = process.env.OPENREVIEW_USERNAME;
+    const password = process.env.OPENREVIEW_PASSWORD;
+
+    let authToken: string | null = null;
+
+    if (username && password) {
+      authToken = await getAuthToken(username, password);
+      if (!authToken) {
+        console.warn(
+          "Failed to authenticate with OpenReview, will attempt unauthenticated access"
+        );
       }
+    }
+
+    const headers: Record<string, string> = {
+      "User-Agent": "research-site/1.0",
+    };
+
+    if (authToken) {
+      headers["Authorization"] = `Bearer ${authToken}`;
+    }
+
+    const profileResponse = await fetch(
+      `https://api2.openreview.net/profiles?id=${encodeURIComponent(userId)}`,
+      { headers }
     );
 
     if (!profileResponse.ok) {
@@ -69,16 +116,11 @@ export async function getOpenReviewSubmissions(
     }
 
     const profileId = profileData.profiles[0].id;
-
     const notesResponse = await fetch(
-      `https://api.openreview.net/notes?signature=${encodeURIComponent(
+      `https://api2.openreview.net/notes?content.authorids=${encodeURIComponent(
         profileId
-      )}&details=replyCount,original&sort=cdate:desc`,
-      {
-        headers: {
-          "User-Agent": "research-site/1.0",
-        },
-      }
+      )}&details=replyCount,invitation&sort=cdate:desc`,
+      { headers }
     );
 
     if (!notesResponse.ok) {
