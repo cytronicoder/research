@@ -1,0 +1,156 @@
+interface OpenReviewNote {
+  id: string;
+  invitation: string;
+  readers: string[];
+  writers: string[];
+  signatures: string[];
+  content: {
+    title: string;
+    abstract?: string;
+    authors: string[];
+    venue?: string;
+    venueid?: string;
+    _bibtex?: string;
+    pdf?: string;
+    [key: string]: string | string[] | undefined;
+  };
+  tcdate: number;
+  tmdate: number;
+  cdate: number;
+  ddate?: number;
+  forum?: string;
+  replyto?: string;
+  number?: number;
+}
+
+interface LinkItem {
+  slug: string;
+  target: string;
+  shortUrl: string;
+  title: string | null;
+  description: string | null;
+  tags: string[];
+  source: "manual" | "orcid" | "openreview";
+}
+
+import { getRedisClient } from "./redis";
+
+export async function getOpenReviewSubmissions(userId: string): Promise<LinkItem[]> {
+  if (!userId) {
+    return [];
+  }
+
+  try {
+    // For now, we'll use a simple REST API approach since the Python client isn't available in Node.js
+    // We'll need to get the user's profile first to get their profile ID
+    const profileResponse = await fetch(
+      `https://api.openreview.net/profiles?id=${encodeURIComponent(userId)}`,
+      {
+        headers: {
+          'User-Agent': 'research-site/1.0',
+        },
+      }
+    );
+
+    if (!profileResponse.ok) {
+      console.error("Error fetching OpenReview profile:", profileResponse.statusText);
+      return [];
+    }
+
+    const profileData = await profileResponse.json();
+    if (!profileData.profiles || profileData.profiles.length === 0) {
+      console.error("No OpenReview profile found for user:", userId);
+      return [];
+    }
+
+    const profileId = profileData.profiles[0].id;
+
+    // Now get all notes (submissions) where this user is an author
+    const notesResponse = await fetch(
+      `https://api.openreview.net/notes?signature=${encodeURIComponent(profileId)}&details=replyCount,original&sort=cdate:desc`,
+      {
+        headers: {
+          'User-Agent': 'research-site/1.0',
+        },
+      }
+    );
+
+    if (!notesResponse.ok) {
+      console.error("Error fetching OpenReview notes:", notesResponse.statusText);
+      return [];
+    }
+
+    const notesData = await notesResponse.json();
+    const redis = await getRedisClient();
+
+    const submissions = await Promise.all(
+      notesData.notes
+        .filter((note: OpenReviewNote) => {
+          // Filter to only include submissions (not reviews, comments, etc.)
+          // Submissions typically have invitations that end with /-/Submission
+          return note.invitation.includes('/-/Submission') ||
+                 note.invitation.includes('/-/Blind_Submission') ||
+                 note.invitation.includes('/-/Paper');
+        })
+        .map(async (note: OpenReviewNote) => {
+          const slug = `openreview-${note.id}`;
+
+          // Check if we have custom metadata stored in Redis
+          const storedMeta = await redis.hGetAll(`meta:${slug}`);
+          const hasStoredMeta = Object.keys(storedMeta).length > 0;
+
+          if (hasStoredMeta) {
+            // Use stored metadata
+            return {
+              slug,
+              target: (await redis.get(`link:${slug}`)) || `https://openreview.net/forum?id=${note.id}`,
+              shortUrl: `/${slug}`,
+              title: storedMeta.title || note.content.title,
+              description: storedMeta.description || note.content.abstract || null,
+              tags: storedMeta.tags ? storedMeta.tags.split(",") : [note.content.venue || 'OpenReview'].filter(Boolean),
+              source: "openreview" as const,
+            };
+          } else {
+            // Store OpenReview data in Redis for future customization
+            const target = note.content.pdf
+              ? `https://openreview.net/pdf?id=${note.id}`
+              : `https://openreview.net/forum?id=${note.id}`;
+
+            await redis.set(`link:${slug}`, target);
+
+            const metadata: Record<string, string> = {
+              permanent: "0",
+              createdAt: new Date().toISOString(),
+              title: note.content.title,
+            };
+
+            if (note.content.abstract) {
+              metadata.description = note.content.abstract;
+            }
+
+            const tags = [note.content.venue || 'OpenReview'].filter(Boolean);
+            if (tags.length > 0) {
+              metadata.tags = tags.join(",");
+            }
+
+            await redis.hSet(`meta:${slug}`, metadata);
+
+            return {
+              slug,
+              target,
+              shortUrl: `/${slug}`,
+              title: note.content.title,
+              description: note.content.abstract || null,
+              tags,
+              source: "openreview" as const,
+            };
+          }
+        })
+    );
+
+    return submissions;
+  } catch (error) {
+    console.error("Error fetching OpenReview submissions:", error);
+    return [];
+  }
+}

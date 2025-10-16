@@ -86,6 +86,37 @@ curl -X PUT https://your-site.com/api/links \
 
 The slug for ORCID entries follows the pattern `orcid-{put-code}`, where `put-code` is the unique identifier from ORCID.
 
+## OpenReview Integration
+
+### Automatic Conference Submission Fetching
+
+If you've configured OpenReview integration by setting the `OPENREVIEW_USER_ID` environment variable, your conference submissions from OpenReview will be automatically fetched and displayed alongside your manual entries and ORCID publications.
+
+The integration fetches submissions where you are listed as an author from conferences that use the OpenReview platform (such as ICLR, NeurIPS, ICML, and many others).
+
+### Updating OpenReview Entries
+
+OpenReview entries are automatically stored in your database when first fetched, allowing you to customize them just like manual entries. To update an OpenReview entry with custom tags or metadata:
+
+```bash
+curl -X PUT https://your-site.com/api/links \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "slug": "openreview-ABC123",
+    "target": "https://openreview.net/forum?id=ABC123",
+    "title": "Custom Title for OpenReview Submission",
+    "description": "Custom description of the work",
+    "tags": ["conference-paper", "machine-learning", "neural-networks"]
+  }'
+```
+
+The slug for OpenReview entries follows the pattern `openreview-{note-id}`, where `note-id` is the unique identifier from OpenReview.
+
+### Configuration
+
+To enable OpenReview integration, set the `OPENREVIEW_USER_ID` environment variable to your OpenReview profile ID (usually your email address or tilde ID like `~First_Last1`).
+
 ## Tag Management
 
 You can rename tags across all entries using the tags API endpoint. This is useful for standardizing tag names or fixing typos.
