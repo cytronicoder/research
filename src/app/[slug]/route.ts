@@ -17,7 +17,6 @@ export async function GET(
       headers: { "X-Robots-Tag": "noindex" },
     });
 
-  // count click (best-effort; don't block redirect if it fails)
   try {
     await redis.incr(`count:${slug}`);
   } catch {}

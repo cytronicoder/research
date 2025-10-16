@@ -46,6 +46,8 @@ interface LinkItem {
   description: string | null;
   tags: string[];
   source: "manual" | "orcid" | "openreview";
+  clicks: number;
+  createdAt?: string | null;
 }
 
 import { getRedisClient } from "./redis";
@@ -78,12 +80,10 @@ export async function getOrcidWorks(orcidId: string): Promise<LinkItem[]> {
         const work = workGroup["work-summary"][0] as OrcidWork;
         const slug = `orcid-${work["put-code"]}`;
 
-        // Check if we have custom metadata stored in Redis
         const storedMeta = await redis.hGetAll(`meta:${slug}`);
         const hasStoredMeta = Object.keys(storedMeta).length > 0;
 
         if (hasStoredMeta) {
-          // Use stored metadata
           return {
             slug,
             target: (await redis.get(`link:${slug}`)) || "",
@@ -100,9 +100,10 @@ export async function getOrcidWorks(orcidId: string): Promise<LinkItem[]> {
               ? [work["journal-title"].value]
               : [],
             source: "orcid" as const,
+            clicks: Number((await redis.get(`count:${slug}`)) || 0),
+            createdAt: storedMeta.createdAt || null,
           };
         } else {
-          // Store ORCID data in Redis for future customization
           const externalIds = work["external-ids"]?.["external-id"] || [];
           const doi = externalIds.find(
             (id) => id["external-id-type"] === "doi"
@@ -138,6 +139,8 @@ export async function getOrcidWorks(orcidId: string): Promise<LinkItem[]> {
             description: description || null,
             tags,
             source: "orcid" as const,
+            clicks: 0,
+            createdAt: new Date().toISOString(),
           };
         }
       })

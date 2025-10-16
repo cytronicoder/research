@@ -5,7 +5,6 @@ const redisUrl =
   process.env.REDIS_URL ||
   "redis://localhost:6379";
 
-// Create a singleton Redis client
 let client: ReturnType<typeof createClient> | null = null;
 
 export async function getRedisClient() {

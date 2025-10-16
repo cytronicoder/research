@@ -31,6 +31,8 @@ interface LinkItem {
   description: string | null;
   tags: string[];
   source: "manual" | "orcid" | "openreview";
+  clicks: number;
+  createdAt?: string | null;
 }
 
 import { getRedisClient } from "./redis";
@@ -41,8 +43,6 @@ export async function getOpenReviewSubmissions(userId: string): Promise<LinkItem
   }
 
   try {
-    // For now, we'll use a simple REST API approach since the Python client isn't available in Node.js
-    // We'll need to get the user's profile first to get their profile ID
     const profileResponse = await fetch(
       `https://api.openreview.net/profiles?id=${encodeURIComponent(userId)}`,
       {
@@ -65,7 +65,6 @@ export async function getOpenReviewSubmissions(userId: string): Promise<LinkItem
 
     const profileId = profileData.profiles[0].id;
 
-    // Now get all notes (submissions) where this user is an author
     const notesResponse = await fetch(
       `https://api.openreview.net/notes?signature=${encodeURIComponent(profileId)}&details=replyCount,original&sort=cdate:desc`,
       {
@@ -86,21 +85,16 @@ export async function getOpenReviewSubmissions(userId: string): Promise<LinkItem
     const submissions = await Promise.all(
       notesData.notes
         .filter((note: OpenReviewNote) => {
-          // Filter to only include submissions (not reviews, comments, etc.)
-          // Submissions typically have invitations that end with /-/Submission
           return note.invitation.includes('/-/Submission') ||
                  note.invitation.includes('/-/Blind_Submission') ||
                  note.invitation.includes('/-/Paper');
         })
         .map(async (note: OpenReviewNote) => {
           const slug = `openreview-${note.id}`;
-
-          // Check if we have custom metadata stored in Redis
           const storedMeta = await redis.hGetAll(`meta:${slug}`);
           const hasStoredMeta = Object.keys(storedMeta).length > 0;
 
           if (hasStoredMeta) {
-            // Use stored metadata
             return {
               slug,
               target: (await redis.get(`link:${slug}`)) || `https://openreview.net/forum?id=${note.id}`,
@@ -109,9 +103,10 @@ export async function getOpenReviewSubmissions(userId: string): Promise<LinkItem
               description: storedMeta.description || note.content.abstract || null,
               tags: storedMeta.tags ? storedMeta.tags.split(",") : [note.content.venue || 'OpenReview'].filter(Boolean),
               source: "openreview" as const,
+              clicks: Number((await redis.get(`count:${slug}`)) || 0),
+              createdAt: storedMeta.createdAt || null,
             };
           } else {
-            // Store OpenReview data in Redis for future customization
             const target = note.content.pdf
               ? `https://openreview.net/pdf?id=${note.id}`
               : `https://openreview.net/forum?id=${note.id}`;
@@ -143,6 +138,8 @@ export async function getOpenReviewSubmissions(userId: string): Promise<LinkItem
               description: note.content.abstract || null,
               tags,
               source: "openreview" as const,
+              clicks: 0,
+              createdAt: new Date().toISOString(),
             };
           }
         })

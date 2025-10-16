@@ -14,6 +14,8 @@ interface LinkItem {
   description: string | null;
   tags: string[];
   source: "manual" | "orcid" | "openreview";
+  clicks: number;
+  createdAt?: string | null;
 }
 
 async function getLinks(): Promise<LinkItem[]> {
@@ -40,11 +42,12 @@ async function getLinks(): Promise<LinkItem[]> {
           description: meta.description || null,
           tags: meta.tags ? meta.tags.split(",") : [],
           source: slug.startsWith("orcid-") ? ("orcid" as const) : ("manual" as const),
+          clicks: Number((await redis.get(`count:${slug}`)) || 0),
+          createdAt: meta.createdAt || null,
         };
       })
     );
 
-    // Filter out ORCID entries since they're handled by getOrcidWorks()
     const manualLinks = links.filter(link => link.source === "manual");
 
     return manualLinks;

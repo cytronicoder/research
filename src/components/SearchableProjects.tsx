@@ -15,6 +15,7 @@ interface LinkItem {
     tags: string[];
     source: "manual" | "orcid" | "openreview";
     clicks: number;
+    createdAt?: string | null;
 }
 
 interface SearchResult {
@@ -34,6 +35,7 @@ export default function SearchableProjects({ initialLinks }: SearchableProjectsP
     const [filteredLinks, setFilteredLinks] = useState<LinkItem[]>(initialLinks);
     const [isSearching, setIsSearching] = useState(false);
     const [highlights, setHighlights] = useState<Record<string, string[]>>({});
+    const [sortBy, setSortBy] = useState<"alphabetical-asc" | "alphabetical-desc" | "newest" | "oldest">("alphabetical-asc");
 
     useEffect(() => {
         const performSearch = async () => {
@@ -110,6 +112,31 @@ export default function SearchableProjects({ initialLinks }: SearchableProjectsP
         return () => clearTimeout(debounceTimer);
     }, [searchQuery, sourceFilter, selectedTag, initialLinks]);
 
+    const sortedLinks = [...filteredLinks].sort((a, b) => {
+        switch (sortBy) {
+            case "alphabetical-asc":
+                const titleA = a.title || a.slug;
+                const titleB = b.title || b.slug;
+                return titleA.localeCompare(titleB);
+            case "alphabetical-desc":
+                const titleADesc = a.title || a.slug;
+                const titleBDesc = b.title || b.slug;
+                return titleBDesc.localeCompare(titleADesc);
+            case "newest":
+                if (a.createdAt && b.createdAt) {
+                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                }
+                return b.slug.localeCompare(a.slug);
+            case "oldest":
+                if (a.createdAt && b.createdAt) {
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                }
+                return a.slug.localeCompare(b.slug);
+            default:
+                return 0;
+        }
+    });
+
     const hasOrcid = initialLinks.some(link => link.source === 'orcid');
     const hasManual = initialLinks.some(link => link.source === 'manual');
     const hasOpenReview = initialLinks.some(link => link.source === 'openreview');
@@ -127,6 +154,21 @@ export default function SearchableProjects({ initialLinks }: SearchableProjectsP
                     </div>
                 </div>
             )}
+            <div className="mb-4 flex justify-center">
+                <div className="flex items-center space-x-4">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Sort by:</span>
+                    <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as any)}
+                        className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value="alphabetical-asc">Alphabetical (A-Z)</option>
+                        <option value="alphabetical-desc">Alphabetical (Z-A)</option>
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                    </select>
+                </div>
+            </div>
             <SearchBar
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
@@ -140,7 +182,7 @@ export default function SearchableProjects({ initialLinks }: SearchableProjectsP
             />
 
             <ProjectList
-                links={filteredLinks}
+                links={sortedLinks}
                 isSearching={isSearching || !!searchQuery || sourceFilter !== 'all' || !!selectedTag}
                 highlights={highlights}
             />
