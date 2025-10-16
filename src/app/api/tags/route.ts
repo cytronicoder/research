@@ -50,3 +50,47 @@ export async function PUT(req: NextRequest) {
     );
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  if (req.headers.get("x-admin-key") !== process.env.ADMIN_KEY)
+    return unauthorized();
+
+  const { tag } = await req.json();
+  if (!tag)
+    return NextResponse.json(
+      { error: "tag required" },
+      { status: 400 }
+    );
+
+  try {
+    const redis = await getRedisClient();
+    const keys = await redis.keys("link:*");
+
+    let updatedCount = 0;
+
+    for (const key of keys) {
+      const slug = key.replace("link:", "");
+      const meta = await redis.hGetAll(`meta:${slug}`);
+
+      if (meta.tags) {
+        const tags = meta.tags.split(",");
+        const filteredTags = tags.filter(t => t.trim() !== tag.trim());
+
+        if (filteredTags.length !== tags.length) {
+          await redis.hSet(`meta:${slug}`, { tags: filteredTags.join(",") });
+          updatedCount++;
+        }
+      }
+    }
+
+    return NextResponse.json({
+      message: `Removed tag "${tag}" from ${updatedCount} entries`
+    });
+  } catch (error) {
+    console.error("Error removing tag:", error);
+    return NextResponse.json(
+      { error: "Failed to remove tag" },
+      { status: 500 }
+    );
+  }
+}
