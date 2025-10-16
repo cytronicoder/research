@@ -4,6 +4,7 @@ import { useState } from "react";
 import SearchBar from "./SearchBar";
 import ProjectList from "./ProjectList";
 import ProjectFooter from "./ProjectFooter";
+import TagDirectory from "./TagDirectory";
 
 interface LinkItem {
     slug: string;
@@ -12,6 +13,7 @@ interface LinkItem {
     title: string | null;
     description: string | null;
     tags: string[];
+    source: "manual" | "orcid";
 }
 
 interface SearchableProjectsProps {
@@ -20,27 +22,58 @@ interface SearchableProjectsProps {
 
 export default function SearchableProjects({ initialLinks }: SearchableProjectsProps) {
     const [searchQuery, setSearchQuery] = useState("");
+    const [sourceFilter, setSourceFilter] = useState<"all" | "manual" | "orcid">("all");
+    const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
-    const filteredLinks = initialLinks.filter(
+    const searchFilteredLinks = initialLinks.filter(
         (link) =>
             link.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
             link.target.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            link.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            link.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (link.title && link.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (link.description && link.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
             link.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
+    const sourceFilteredLinks = searchFilteredLinks.filter(link => {
+        if (sourceFilter === 'all') return true;
+        return link.source === sourceFilter;
+    });
+
+    const filteredLinks = sourceFilteredLinks.filter(link => {
+        if (!selectedTag) return true;
+        return link.tags.some(tag => tag.toLowerCase() === selectedTag.toLowerCase());
+    });
+
+    const hasOrcid = initialLinks.some(link => link.source === 'orcid');
+    const hasManual = initialLinks.some(link => link.source === 'manual');
+    const allTags = initialLinks.flatMap(link => link.tags);
+
     return (
         <>
+            {hasOrcid && hasManual && (
+                <div className="mb-4 flex justify-center">
+                    <div className="flex space-x-1 rounded-lg bg-gray-200 dark:bg-gray-800 p-1">
+                        <button onClick={() => setSourceFilter('all')} className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${sourceFilter === 'all' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>All</button>
+                        <button onClick={() => setSourceFilter('manual')} className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${sourceFilter === 'manual' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>Manual</button>
+                        <button onClick={() => setSourceFilter('orcid')} className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${sourceFilter === 'orcid' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>ORCID</button>
+                    </div>
+                </div>
+            )}
             <SearchBar
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
-                resultsCount={searchQuery ? filteredLinks.length : undefined}
+                resultsCount={searchQuery || sourceFilter !== 'all' || selectedTag ? filteredLinks.length : undefined}
             />
 
-            <ProjectList links={filteredLinks} isSearching={!!searchQuery} />
+            <TagDirectory
+                allTags={allTags}
+                selectedTag={selectedTag}
+                onTagSelect={setSelectedTag}
+            />
 
-            <ProjectFooter totalProjects={initialLinks.length} isSearching={!!searchQuery} />
+            <ProjectList links={filteredLinks} isSearching={!!searchQuery || sourceFilter !== 'all' || !!selectedTag} />
+
+            <ProjectFooter totalProjects={initialLinks.length} isSearching={!!searchQuery || sourceFilter !== 'all' || !!selectedTag} />
         </>
     );
 }
