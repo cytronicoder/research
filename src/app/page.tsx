@@ -38,12 +38,15 @@ async function getLinks(): Promise<LinkItem[]> {
           title: meta.title || null,
           description: meta.description || null,
           tags: meta.tags ? meta.tags.split(",") : [],
-          source: "manual" as const,
+          source: slug.startsWith("orcid-") ? ("orcid" as const) : ("manual" as const),
         };
       })
     );
 
-    return links;
+    // Filter out ORCID entries since they're handled by getOrcidWorks()
+    const manualLinks = links.filter(link => link.source === "manual");
+
+    return manualLinks;
   } catch (error) {
     console.error("Error fetching links:", error);
     return [];
