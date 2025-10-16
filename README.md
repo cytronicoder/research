@@ -41,9 +41,12 @@ To install and run your own instance:
    ```env
    RESEARCH_REDIS_URL=your-redis-connection-string
    ADMIN_KEY=your-secure-admin-key
+   ORCID_ID=your-orcid-id
    ```
 
    For my project, I am taking advantage of [Vercel's Redis integration](https://vercel.com/integrations/redis). It's pretty straightforward to [set up](https://redis.io/docs/latest/operate/rc/cloud-integrations/vercel/).
+
+   This project also allows you to optionally link your [ORCID](https://orcid.org/) profile by providing your ORCID ID. This will display your ORCID information on the homepage.
 
 Now, start the development server:
 
@@ -102,6 +105,27 @@ addResearch({
 ### Admin Panel
 
 The admin panel is accessible at [https://your-site.com/admin](https://your-site.com/admin). It allows you to add, update, and delete research projects. The admin panel is only accessible if the `ADMIN_KEY` environment variable is set.
+
+### Updating ORCID Entries
+
+If you've configured ORCID integration, you can customize the tags and metadata for your ORCID publications. ORCID entries are automatically stored in your database when first fetched, allowing you to update them just like manual entries.
+
+To update an ORCID entry with custom tags:
+
+```bash
+curl -X PUT https://your-site.com/api/links \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "slug": "orcid-12345",
+    "target": "https://doi.org/10.1234/example",
+    "title": "Custom Title for ORCID Work",
+    "description": "Custom description",
+    "tags": ["machine-learning", "neural-networks", "python"]
+  }'
+```
+
+The slug for ORCID entries follows the pattern `orcid-{put-code}`, where `put-code` is the unique identifier from ORCID.
 
 ### Next Steps
 
