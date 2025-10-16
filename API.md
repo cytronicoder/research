@@ -33,34 +33,100 @@ curl -X PUT https://your-site.com/api/links \
 - `description`: Brief description
 - `tags`: Array of tag strings
 
-Alternatively, you can use a simple Node.js script to upload research items:
+### Bulk Operations
 
-```javascript
-const fetch = require("node-fetch");
+#### Adding Multiple Projects
 
-async function addResearch(data) {
-  const response = await fetch("https://your-site.com/api/links", {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      "x-admin-key": process.env.ADMIN_KEY,
-    },
-    body: JSON.stringify(data),
-  });
+To add multiple projects at once:
 
-  return response.json();
-}
+```bash
+curl -X POST https://your-site.com/api/links \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "links": [
+      {
+        "slug": "project-1",
+        "target": "https://example.com/project1",
+        "title": "Project 1",
+        "description": "Description 1",
+        "tags": ["tag1", "tag2"]
+      },
+      {
+        "slug": "project-2",
+        "target": "https://example.com/project2",
+        "title": "Project 2",
+        "description": "Description 2",
+        "tags": ["tag2", "tag3"]
+      }
+    ]
+  }'
+```
 
-// Example usage
-addResearch({
-  slug: "machine-learning-study",
-  target: "https://github.com/your-username/machine-learning-study",
-  title: "Machine Learning Study",
-  description: "Analysis of ML algorithms for natural language processing",
-  tags: ["machine-learning", "nlp", "python"],
-})
-  .then(console.log)
-  .catch(console.error);
+#### Bulk Updates
+
+To update multiple projects at once:
+
+```bash
+curl -X PATCH https://your-site.com/api/links \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "slugs": ["project-1", "project-2"],
+    "updates": {
+      "tags": ["updated-tag"],
+      "description": "Updated description for all"
+    }
+  }'
+```
+
+#### Bulk Deletion
+
+To delete multiple projects:
+
+```bash
+curl -X DELETE "https://your-site.com/api/links?slugs=project-1,project-2,project-3" \
+  -H "x-admin-key: your-admin-key"
+```
+
+### Querying Projects
+
+#### Get All Projects with Filtering
+
+```bash
+# Get all projects
+curl "https://your-site.com/api/links" \
+  -H "x-admin-key: your-admin-key"
+
+# Filter by tag
+curl "https://your-site.com/api/links?tag=machine-learning" \
+  -H "x-admin-key: your-admin-key"
+
+# Filter by source
+curl "https://your-site.com/api/links?source=orcid" \
+  -H "x-admin-key: your-admin-key"
+
+# Search across title, description, and tags
+curl "https://your-site.com/api/links?search=neural" \
+  -H "x-admin-key: your-admin-key"
+
+# Pagination
+curl "https://your-site.com/api/links?limit=10&offset=20" \
+  -H "x-admin-key: your-admin-key"
+```
+
+#### Get Specific Project
+
+```bash
+curl "https://your-site.com/api/links?slug=project-name" \
+  -H "x-admin-key: your-admin-key"
+```
+
+### Deleting Projects
+
+```bash
+curl -X DELETE "https://your-site.com/api/links?slug=project-name" \
+  -H "x-admin-key: your-admin-key"
 ```
 
 ## ORCID Integration
@@ -119,7 +185,7 @@ To enable OpenReview integration, set the `OPENREVIEW_USER_ID` environment varia
 
 ## Tag Management
 
-You can rename tags across all entries using the tags API endpoint. This is useful for standardizing tag names or fixing typos.
+You can manage tags across entries using the tags API endpoint. This includes renaming tags, removing tags, and bulk operations for adding/removing tags from multiple entries.
 
 ### Renaming Tags
 
@@ -137,6 +203,38 @@ curl -X PUT https://your-site.com/api/tags \
 
 This will update all entries that have the old tag to use the new tag name.
 
+### Adding Tags to Multiple Entries
+
+To add one or more tags to multiple entries at once:
+
+```bash
+curl -X POST https://your-site.com/api/tags \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "slugs": ["project-1", "project-2", "project-3"],
+    "tags": ["new-tag", "another-tag"]
+  }'
+```
+
+This will add the specified tags to all the entries with the given slugs. Duplicates are automatically removed.
+
+### Removing Tags from Multiple Entries
+
+To remove one or more tags from multiple entries at once:
+
+```bash
+curl -X PATCH https://your-site.com/api/tags \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "slugs": ["project-1", "project-2", "project-3"],
+    "tags": ["old-tag", "unwanted-tag"]
+  }'
+```
+
+This will remove the specified tags from all the entries with the given slugs.
+
 ### Removing Tags
 
 To remove a tag from all entries:
@@ -151,6 +249,86 @@ curl -X DELETE https://your-site.com/api/tags \
 ```
 
 This will remove the specified tag from all entries that contain it.
+
+### Tag Statistics
+
+Get comprehensive statistics about tags:
+
+```bash
+curl "https://your-site.com/api/tags?action=stats" \
+  -H "x-admin-key: your-admin-key"
+```
+
+Returns tag counts, source distribution, and top tags.
+
+### Tag Suggestions
+
+Get tag suggestions based on partial input:
+
+```bash
+curl "https://your-site.com/api/tags?action=suggest&prefix=mach" \
+  -H "x-admin-key: your-admin-key"
+```
+
+Returns up to 10 tag suggestions that start with the given prefix.
+
+## Analytics API
+
+Get comprehensive analytics about your research site:
+
+```bash
+# All-time statistics
+curl "https://your-site.com/api/stats" \
+  -H "x-admin-key: your-admin-key"
+
+# Statistics for specific period
+curl "https://your-site.com/api/stats?period=week" \
+  -H "x-admin-key: your-admin-key"
+```
+
+**Available periods:** `all`, `week`, `month`, `year`
+
+Returns total links, clicks, source distribution, top performers, recent activity, and more.
+
+## Search API
+
+Advanced search across all entries:
+
+```bash
+# Search by query
+curl "https://your-site.com/api/search?q=neural" \
+  -H "x-admin-key: your-admin-key"
+
+# Search with filters
+curl "https://your-site.com/api/search?q=machine&tag=python&source=manual" \
+  -H "x-admin-key: your-admin-key"
+
+# Paginated search
+curl "https://your-site.com/api/search?q=research&limit=5&offset=10" \
+  -H "x-admin-key: your-admin-key"
+```
+
+Returns ranked results with relevance scores and highlights.
+
+## Export API
+
+Export all your data for backup or migration:
+
+```bash
+# Export as JSON
+curl "https://your-site.com/api/export" \
+  -H "x-admin-key: your-admin-key"
+
+# Export as CSV
+curl "https://your-site.com/api/export?format=csv" \
+  -H "x-admin-key: your-admin-key"
+
+# Export specific source
+curl "https://your-site.com/api/export?source=orcid" \
+  -H "x-admin-key: your-admin-key"
+```
+
+**Formats:** `json`, `csv`
 
 ## Admin Panel
 

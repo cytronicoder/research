@@ -1,3 +1,4 @@
+import React from "react";
 import Image from "next/image";
 import ShareButton from "./ShareButton";
 
@@ -9,6 +10,19 @@ interface ProjectCardProps {
     tags: string[];
     source: "manual" | "orcid" | "openreview";
     shortUrl: string;
+    highlights?: string[];
+}
+
+function highlightText(text: string, highlights: string[] = []): React.JSX.Element {
+    if (!highlights.length) return <>{text}</>;
+
+    let highlightedText = text;
+    highlights.forEach(highlight => {
+        const regex = new RegExp(`(${highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        highlightedText = highlightedText.replace(regex, '<mark class="bg-yellow-200 dark:bg-yellow-800">$1</mark>');
+    });
+
+    return <span dangerouslySetInnerHTML={{ __html: highlightedText }} />;
 }
 
 export default function ProjectCard({
@@ -19,6 +33,7 @@ export default function ProjectCard({
     tags,
     source,
     shortUrl,
+    highlights = [],
 }: ProjectCardProps) {
     const displayTitle =
         title ||
@@ -44,12 +59,12 @@ export default function ProjectCard({
                             <Image src="/openreview.svg" alt="OpenReview" width={20} height={20} className="dark:invert" />
                         )}
                         <h2 className="text-xl font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                            {displayTitle}
+                            {highlightText(displayTitle, highlights)}
                         </h2>
                     </div>
                     {description && (
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
-                            {description}
+                            {highlightText(description, highlights)}
                         </p>
                     )}
                     {tags && tags.length > 0 && (
@@ -57,7 +72,11 @@ export default function ProjectCard({
                             {tags.map((tag) => (
                                 <span
                                     key={tag}
-                                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
+                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                        highlights.some(h => tag.toLowerCase().includes(h.toLowerCase()))
+                                            ? 'bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200'
+                                            : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                                    }`}
                                 >
                                     {tag}
                                 </span>

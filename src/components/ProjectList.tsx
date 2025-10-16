@@ -13,9 +13,10 @@ interface LinkItem {
 interface ProjectListProps {
     links: LinkItem[];
     isSearching: boolean;
+    highlights?: Record<string, string[]>;
 }
 
-export default function ProjectList({ links, isSearching }: ProjectListProps) {
+export default function ProjectList({ links, isSearching, highlights }: ProjectListProps) {
     if (links.length === 0) {
         return (
             <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-16 text-center">
@@ -40,6 +41,7 @@ export default function ProjectList({ links, isSearching }: ProjectListProps) {
                     tags={link.tags}
                     source={link.source}
                     shortUrl={link.shortUrl}
+                    highlights={highlights?.[link.slug]}
                 />
             ))}
         </div>

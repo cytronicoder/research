@@ -14,6 +14,17 @@ interface LinkItem {
     createdAt: string | null;
 }
 
+interface AnalyticsData {
+    totalLinks: number;
+    totalClicks: number;
+    sources: { manual: number; orcid: number; openreview: number };
+    topTags: [string, number][];
+    recentActivity: Array<{ slug: string, clicks: number, lastAccessed?: string }>;
+    topPerformers: Array<{ slug: string, clicks: number, title?: string }>;
+    avgClicksPerLink: number;
+    uniqueTags: number;
+}
+
 export default function AdminDashboard() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [password, setPassword] = useState("");
@@ -22,6 +33,12 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const [selectedLinks, setSelectedLinks] = useState<Set<string>>(new Set());
+    const [bulkAction, setBulkAction] = useState<"delete" | "addTags" | "removeTags" | null>(null);
+    const [bulkTagInput, setBulkTagInput] = useState("");
+    const [showAnalytics, setShowAnalytics] = useState(false);
+    const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+    const [analyticsPeriod, setAnalyticsPeriod] = useState<"all" | "week" | "month" | "year">("all");
 
     useEffect(() => {
         const auth = sessionStorage.getItem("admin_authenticated");
@@ -30,6 +47,30 @@ export default function AdminDashboard() {
             fetchLinks();
         }
     }, []);
+
+    useEffect(() => {
+        if (showAnalytics && isAuthenticated) {
+            fetchAnalytics();
+        }
+    }, [showAnalytics, analyticsPeriod, isAuthenticated]);
+
+    function handleSelectAll() {
+        if (selectedLinks.size === filteredLinks.length) {
+            setSelectedLinks(new Set());
+        } else {
+            setSelectedLinks(new Set(filteredLinks.map(link => link.slug)));
+        }
+    }
+
+    function handleSelectLink(slug: string) {
+        const newSelected = new Set(selectedLinks);
+        if (newSelected.has(slug)) {
+            newSelected.delete(slug);
+        } else {
+            newSelected.add(slug);
+        }
+        setSelectedLinks(newSelected);
+    }
 
     async function handleAuth(e: React.FormEvent) {
         e.preventDefault();
@@ -58,14 +99,154 @@ export default function AdminDashboard() {
     async function fetchLinks() {
         setLoading(true);
         try {
-            const response = await fetch("/api/directory");
+            const response = await fetch("/api/links", {
+                headers: {
+                    "x-admin-key": sessionStorage.getItem("admin_key") || "",
+                },
+            });
             if (!response.ok) throw new Error("Failed to fetch links");
             const data = await response.json();
-            setLinks(data.links);
+
+            const transformedLinks = data.links.map((link: any) => ({
+                slug: link.slug,
+                target: link.target,
+                clicks: link.clicks,
+                shortUrl: `${window.location.origin}/${link.slug}`,
+                title: link.metadata?.title || null,
+                description: link.metadata?.description || null,
+                tags: link.metadata?.tags || [],
+                createdAt: link.metadata?.createdAt || null,
+            }));
+
+            setLinks(transformedLinks);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to load links");
         } finally {
             setLoading(false);
+        }
+    }
+
+    async function fetchAnalytics() {
+        try {
+            const response = await fetch(`/api/stats?period=${analyticsPeriod}`, {
+                headers: {
+                    "x-admin-key": sessionStorage.getItem("admin_key") || "",
+                },
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setAnalytics(data);
+            }
+        } catch (err) {
+            console.error("Failed to fetch analytics:", err);
+        }
+    }
+
+    async function handleBulkDelete() {
+        if (selectedLinks.size === 0) return;
+
+        const slugs = Array.from(selectedLinks).join(",");
+        try {
+            const response = await fetch(`/api/links?slugs=${slugs}`, {
+                method: "DELETE",
+                headers: {
+                    "x-admin-key": sessionStorage.getItem("admin_key") || "",
+                },
+            });
+
+            if (response.ok) {
+                setSelectedLinks(new Set());
+                fetchLinks();
+            } else {
+                alert("Failed to delete selected links");
+            }
+        } catch (err) {
+            alert("Error deleting links");
+        }
+    }
+
+    async function handleBulkAddTags() {
+        if (selectedLinks.size === 0 || !bulkTagInput.trim()) return;
+
+        const tags = bulkTagInput.split(",").map(t => t.trim()).filter(t => t);
+        try {
+            const response = await fetch("/api/tags", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-admin-key": sessionStorage.getItem("admin_key") || "",
+                },
+                body: JSON.stringify({
+                    slugs: Array.from(selectedLinks),
+                    tags,
+                }),
+            });
+
+            if (response.ok) {
+                setSelectedLinks(new Set());
+                setBulkAction(null);
+                setBulkTagInput("");
+                fetchLinks();
+            } else {
+                alert("Failed to add tags");
+            }
+        } catch (err) {
+            alert("Error adding tags");
+        }
+    }
+
+    async function handleBulkRemoveTags() {
+        if (selectedLinks.size === 0 || !bulkTagInput.trim()) return;
+
+        const tags = bulkTagInput.split(",").map(t => t.trim()).filter(t => t);
+        try {
+            const response = await fetch("/api/tags", {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-admin-key": sessionStorage.getItem("admin_key") || "",
+                },
+                body: JSON.stringify({
+                    slugs: Array.from(selectedLinks),
+                    tags,
+                }),
+            });
+
+            if (response.ok) {
+                setSelectedLinks(new Set());
+                setBulkAction(null);
+                setBulkTagInput("");
+                fetchLinks();
+            } else {
+                alert("Failed to remove tags");
+            }
+        } catch (err) {
+            alert("Error removing tags");
+        }
+    }
+
+    async function handleExport(format: "json" | "csv") {
+        try {
+            const response = await fetch(`/api/export?format=${format}`, {
+                headers: {
+                    "x-admin-key": sessionStorage.getItem("admin_key") || "",
+                },
+            });
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `research-export-${new Date().toISOString().split('T')[0]}.${format}`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } else {
+                alert("Failed to export data");
+            }
+        } catch (err) {
+            alert("Error exporting data");
         }
     }
 
@@ -256,6 +437,166 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
+                {/* Action Buttons */}
+                <div className="flex flex-wrap gap-4 mb-6">
+                    <button
+                        onClick={() => setShowAnalytics(!showAnalytics)}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
+                    >
+                        {showAnalytics ? "Hide Analytics" : "Show Analytics"}
+                    </button>
+                    <button
+                        onClick={() => handleExport("json")}
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
+                    >
+                        Export JSON
+                    </button>
+                    <button
+                        onClick={() => handleExport("csv")}
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
+                    >
+                        Export CSV
+                    </button>
+                </div>
+
+                {/* Analytics View */}
+                {showAnalytics && (
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Analytics</h2>
+                            <select
+                                value={analyticsPeriod}
+                                onChange={(e) => setAnalyticsPeriod(e.target.value as any)}
+                                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            >
+                                <option value="all">All Time</option>
+                                <option value="week">Last Week</option>
+                                <option value="month">Last Month</option>
+                                <option value="year">Last Year</option>
+                            </select>
+                        </div>
+
+                        {analytics ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Overview</h3>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600 dark:text-gray-400">Total Links:</span>
+                                            <span className="font-medium">{analytics.totalLinks}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600 dark:text-gray-400">Total Clicks:</span>
+                                            <span className="font-medium">{analytics.totalClicks.toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600 dark:text-gray-400">Avg Clicks/Link:</span>
+                                            <span className="font-medium">{analytics.avgClicksPerLink}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600 dark:text-gray-400">Unique Tags:</span>
+                                            <span className="font-medium">{analytics.uniqueTags}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Sources</h3>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600 dark:text-gray-400">Manual:</span>
+                                            <span className="font-medium">{analytics.sources.manual}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600 dark:text-gray-400">ORCID:</span>
+                                            <span className="font-medium">{analytics.sources.orcid}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600 dark:text-gray-400">OpenReview:</span>
+                                            <span className="font-medium">{analytics.sources.openreview}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Top Tags</h3>
+                                    <div className="space-y-2">
+                                        {analytics.topTags.slice(0, 5).map(([tag, count]) => (
+                                            <div key={tag} className="flex justify-between">
+                                                <span className="text-gray-600 dark:text-gray-400">{tag}:</span>
+                                                <span className="font-medium">{count}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center py-8">
+                                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
+                                <p className="mt-2 text-gray-600 dark:text-gray-400">Loading analytics...</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Bulk Actions */}
+                {selectedLinks.size > 0 && (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                                {selectedLinks.size} link{selectedLinks.size === 1 ? "" : "s"} selected
+                            </span>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setBulkAction("addTags")}
+                                    className="px-3 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
+                                >
+                                    Add Tags
+                                </button>
+                                <button
+                                    onClick={() => setBulkAction("removeTags")}
+                                    className="px-3 py-1 text-xs bg-yellow-600 hover:bg-yellow-700 text-white rounded transition-colors"
+                                >
+                                    Remove Tags
+                                </button>
+                                <button
+                                    onClick={handleBulkDelete}
+                                    className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+
+                        {bulkAction && (
+                            <div className="mt-4 flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder={bulkAction === "addTags" ? "tag1, tag2, tag3" : "tag1, tag2"}
+                                    value={bulkTagInput}
+                                    onChange={(e) => setBulkTagInput(e.target.value)}
+                                    className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                />
+                                <button
+                                    onClick={bulkAction === "addTags" ? handleBulkAddTags : handleBulkRemoveTags}
+                                    className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                                >
+                                    Apply
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setBulkAction(null);
+                                        setBulkTagInput("");
+                                    }}
+                                    className="px-4 py-2 text-sm bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 <div className="mb-8">
                     <input
                         type="text"
@@ -292,6 +633,14 @@ export default function AdminDashboard() {
                                 <thead className="bg-gray-50 dark:bg-gray-900">
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedLinks.size === filteredLinks.length && filteredLinks.length > 0}
+                                                onChange={handleSelectAll}
+                                                className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-400"
+                                            />
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Short Link
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -317,6 +666,14 @@ export default function AdminDashboard() {
                                             key={link.slug}
                                             className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                                         >
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedLinks.has(link.slug)}
+                                                    onChange={() => handleSelectLink(link.slug)}
+                                                    className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-400"
+                                                />
+                                            </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <Link
                                                     href={link.shortUrl}
