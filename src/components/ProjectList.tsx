@@ -7,6 +7,7 @@ interface LinkItem {
     title: string | null;
     description: string | null;
     tags: string[];
+    source: "manual" | "orcid";
 }
 
 interface ProjectListProps {
@@ -37,6 +38,8 @@ export default function ProjectList({ links, isSearching }: ProjectListProps) {
                     title={link.title}
                     description={link.description}
                     tags={link.tags}
+                    source={link.source}
+                    shortUrl={link.shortUrl}
                 />
             ))}
         </div>
