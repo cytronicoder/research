@@ -1,7 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+
+interface ApiLinkItem {
+    slug: string;
+    target: string;
+    clicks: number;
+    metadata?: {
+        title?: string;
+        description?: string;
+        tags?: string[];
+        createdAt?: string;
+    };
+}
 
 interface LinkItem {
     slug: string;
@@ -107,7 +119,7 @@ export default function AdminDashboard() {
             if (!response.ok) throw new Error("Failed to fetch links");
             const data = await response.json();
 
-            const transformedLinks = data.links.map((link: any) => ({
+            const transformedLinks = data.links.map((link: ApiLinkItem) => ({
                 slug: link.slug,
                 target: link.target,
                 clicks: link.clicks,
@@ -126,7 +138,7 @@ export default function AdminDashboard() {
         }
     }
 
-    async function fetchAnalytics() {
+    const fetchAnalytics = useCallback(async () => {
         try {
             const response = await fetch(`/api/stats?period=${analyticsPeriod}`, {
                 headers: {
@@ -140,7 +152,7 @@ export default function AdminDashboard() {
         } catch (err) {
             console.error("Failed to fetch analytics:", err);
         }
-    }
+    }, [analyticsPeriod]);
 
     async function handleBulkDelete() {
         if (selectedLinks.size === 0) return;
@@ -160,7 +172,7 @@ export default function AdminDashboard() {
             } else {
                 alert("Failed to delete selected links");
             }
-        } catch (err) {
+        } catch (_err) {
             alert("Error deleting links");
         }
     }
@@ -190,7 +202,7 @@ export default function AdminDashboard() {
             } else {
                 alert("Failed to add tags");
             }
-        } catch (err) {
+        } catch (_err) {
             alert("Error adding tags");
         }
     }
@@ -220,7 +232,7 @@ export default function AdminDashboard() {
             } else {
                 alert("Failed to remove tags");
             }
-        } catch (err) {
+        } catch (_err) {
             alert("Error removing tags");
         }
     }
@@ -245,7 +257,7 @@ export default function AdminDashboard() {
             } else {
                 alert("Failed to export data");
             }
-        } catch (err) {
+        } catch (_err) {
             alert("Error exporting data");
         }
     }
@@ -466,7 +478,7 @@ export default function AdminDashboard() {
                             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Analytics</h2>
                             <select
                                 value={analyticsPeriod}
-                                onChange={(e) => setAnalyticsPeriod(e.target.value as any)}
+                                onChange={(e) => setAnalyticsPeriod(e.target.value as "all" | "week" | "month" | "year")}
                                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                             >
                                 <option value="all">All Time</option>

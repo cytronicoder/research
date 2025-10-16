@@ -159,7 +159,7 @@ export default function SearchableProjects({ initialLinks }: SearchableProjectsP
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Sort by:</span>
                     <select
                         value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value as any)}
+                        onChange={(e) => setSortBy(e.target.value as "alphabetical-asc" | "alphabetical-desc" | "newest" | "oldest")}
                         className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                         <option value="alphabetical-asc">Alphabetical (A-Z)</option>
