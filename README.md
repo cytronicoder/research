@@ -127,6 +127,24 @@ curl -X PUT https://your-site.com/api/links \
 
 The slug for ORCID entries follows the pattern `orcid-{put-code}`, where `put-code` is the unique identifier from ORCID.
 
+### Tag Management
+
+You can rename tags across all entries using the tags API endpoint. This is useful for standardizing tag names or fixing typos.
+
+To rename a tag:
+
+```bash
+curl -X PUT https://your-site.com/api/tags \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "oldTag": "machine learning",
+    "newTag": "machine-learning"
+  }'
+```
+
+This will update all entries that have the old tag to use the new tag name.
+
 ### Next Steps
 
 You can customize the site further by:
