@@ -137,7 +137,7 @@ export async function getOpenReviewSubmissions(
     const submissions = await Promise.all(
       notesData.notes
         .filter((note: OpenReviewNote) => {
-          return (
+          return note.invitation && (
             note.invitation.includes("/-/Submission") ||
             note.invitation.includes("/-/Blind_Submission") ||
             note.invitation.includes("/-/Paper")
