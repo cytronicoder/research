@@ -42,12 +42,12 @@ async function getAuthToken(
   password: string
 ): Promise<string | null> {
   try {
-    const response = await fetch("https://api2.openreview.net/token", {
+    const response = await fetch("https://api2.openreview.net/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ id: username, password }),
     });
 
     if (!response.ok) {
