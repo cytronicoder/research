@@ -68,13 +68,13 @@ export default function ProjectCard({
                         </p>
                     )}
                     {tags && tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3">
+                        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide mb-3">
                             {tags.map((tag) => (
                                 <span
                                     key={tag}
-                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${highlights.some(h => tag.toLowerCase().includes(h.toLowerCase()))
-                                            ? 'bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200'
-                                            : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${highlights.some(h => tag.toLowerCase().includes(h.toLowerCase()))
+                                        ? 'bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200'
+                                        : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
                                         }`}
                                 >
                                     {tag}
