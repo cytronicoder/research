@@ -11,9 +11,10 @@ interface OpenReviewNote {
     authors: { value: string[] } | string[];
     venue?: { value: string } | string;
     venueid?: { value: string } | string;
+    keywords?: { value: string[] } | string[];
     _bibtex?: { value: string } | string;
     pdf?: { value: string } | string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   tcdate: number;
   tmdate: number;
@@ -23,8 +24,44 @@ interface OpenReviewNote {
   replyto?: string;
   number?: number;
   details?: {
-    invitation?: any;
-    invitations?: any[];
+    invitation?: {
+      id: string;
+      type: string;
+      maxReplies: number;
+      signatures: string[];
+      readers: string[];
+      writers: string[];
+      invitees: string[];
+      edit: unknown;
+      invitations: unknown[];
+      domain: string;
+      tcdate: number;
+      cdate: number;
+      tmdate: number;
+      mdate: number;
+      details: {
+        writable: boolean;
+      };
+    };
+    invitations?: {
+      id: string;
+      type: string;
+      maxReplies: number;
+      signatures: string[];
+      readers: string[];
+      writers: string[];
+      invitees: string[];
+      edit: unknown;
+      invitations: unknown[];
+      domain: string;
+      tcdate: number;
+      cdate: number;
+      tmdate: number;
+      mdate: number;
+      details: {
+        writable: boolean;
+      };
+    }[];
     replyCount?: number;
   };
 }
@@ -62,6 +99,47 @@ function extractArrayValue(
   )
     return field.value;
   return [];
+}
+
+function cleanConferenceName(venue: string, invitations?: string[]): string {
+  if (invitations && invitations.length > 0) {
+    for (const invitation of invitations) {
+      const match = invitation.match(/^([A-Z][a-z]+\.org)\/([A-Z]+)\/(\d{4})/);
+      if (match) {
+        const [, org, conf, year] = match;
+        const cleanOrg = org.replace(".org", "");
+        return `${cleanOrg} ${conf} ${year}`;
+      }
+
+      const ieeeMatch = invitation.match(
+        /^([A-Z][a-z]+\.org)\/([A-Z]+)\/([A-Z]+)\/(\d{4})/
+      );
+      if (ieeeMatch) {
+        const [, org, , conf, year] = ieeeMatch;
+        const cleanOrg = org.replace(".org", "");
+        return `${cleanOrg} ${conf}'${year.slice(-2)}`;
+      }
+    }
+  }
+
+  if (!venue) return "OpenReview";
+  let cleanName = venue
+    .replace(/\s+Poster.*$/i, "")
+    .replace(/\s+Abstract.*$/i, "")
+    .replace(/\s+Submission.*$/i, "")
+    .replace(/\s+Paper.*$/i, "")
+    .replace(/\s+Proceedings.*$/i, "")
+    .replace(/\s+Workshop.*$/i, "")
+    .trim();
+
+  if (cleanName.length < 5) {
+    const match = venue.match(/^([A-Z\s]+(?:\s+[A-Z]+)*)\s+(\d{4})/);
+    if (match) {
+      cleanName = `${match[1]} ${match[2]}`;
+    }
+  }
+
+  return cleanName || "OpenReview";
 }
 
 async function getAuthToken(
@@ -246,12 +324,53 @@ export async function getOpenReviewSubmissions(
     const submissions = await Promise.all(
       submissionNotes.map(async (note: OpenReviewNote) => {
         const slug = `openreview-${note.id}`;
+
+        const isProceedings =
+          note.invitations?.some((inv: string) =>
+            inv.includes("/-/Proceedings")
+          ) || false;
+
         const storedMeta = await redis.hGetAll(`meta:${slug}`);
         const hasStoredMeta = Object.keys(storedMeta).length > 0;
 
         if (hasStoredMeta) {
+          let tags = storedMeta.tags ? storedMeta.tags.split(",") : [];
+          const venue = extractValue(note.content.venue);
+          const cleanedConference = cleanConferenceName(
+            venue,
+            note.invitations
+          );
+
+          const keywords = extractArrayValue(note.content.keywords);
+
+          if (
+            tags.length === 1 &&
+            (tags[0] === venue ||
+              tags[0] === "OpenReview" ||
+              tags[0].includes("Poster") ||
+              tags[0].includes("Abstract"))
+          ) {
+            tags = [cleanedConference, ...keywords].filter(Boolean);
+            if (tags.length === 0) tags = ["OpenReview"];
+            await redis.hSet(`meta:${slug}`, { tags: tags.join(",") });
+            console.log(
+              `Debug: Updated stored tags for ${slug} from "${
+                storedMeta.tags
+              }" to "${tags.join(",")}"`
+            );
+          } else if (
+            keywords.length > 0 &&
+            !tags.some((tag: string) => keywords.includes(tag))
+          ) {
+            tags = [...tags, ...keywords];
+            await redis.hSet(`meta:${slug}`, { tags: tags.join(",") });
+            console.log(
+              `Debug: Added keywords to tags for ${slug}: "${tags.join(",")}"`
+            );
+          }
+
           return {
-            slug,
+            slug: isProceedings ? `${slug}-proceedings` : slug,
             target:
               (await redis.get(`link:${slug}`)) ||
               `https://openreview.net/forum?id=${note.id}`,
@@ -259,9 +378,7 @@ export async function getOpenReviewSubmissions(
             title: storedMeta.title || note.content.title,
             description:
               storedMeta.description || note.content.abstract || null,
-            tags: storedMeta.tags
-              ? storedMeta.tags.split(",")
-              : [note.content.venue || "OpenReview"].filter(Boolean),
+            tags,
             source: "openreview" as const,
             clicks: Number((await redis.get(`count:${slug}`)) || 0),
             createdAt: storedMeta.createdAt || null,
@@ -285,7 +402,11 @@ export async function getOpenReviewSubmissions(
           }
 
           const venue = extractValue(note.content.venue);
-          const tags = [venue || "OpenReview"].filter(Boolean);
+          const conferenceTag = cleanConferenceName(venue, note.invitations);
+          const keywords = extractArrayValue(note.content.keywords);
+          const allTags = [conferenceTag, ...keywords].filter(Boolean);
+
+          const tags = allTags.length > 0 ? allTags : ["OpenReview"];
           if (tags.length > 0) {
             metadata.tags = tags.join(",");
           }
@@ -293,7 +414,7 @@ export async function getOpenReviewSubmissions(
           await redis.hSet(`meta:${slug}`, metadata);
 
           return {
-            slug,
+            slug: isProceedings ? `${slug}-proceedings` : slug,
             target,
             shortUrl: `/${slug}`,
             title: extractValue(note.content.title),
@@ -310,7 +431,79 @@ export async function getOpenReviewSubmissions(
     console.log(
       `Debug: OpenReview processing complete - ${submissions.length} submissions returned`
     );
-    return submissions;
+
+    const submissionsByTitle = new Map<string, LinkItem[]>();
+
+    for (const submission of submissions) {
+      const normalizedTitle =
+        submission.title
+          ?.toLowerCase()
+          .replace(/[^\w\s]/g, "")
+          .trim() || "";
+
+      if (!submissionsByTitle.has(normalizedTitle)) {
+        submissionsByTitle.set(normalizedTitle, []);
+      }
+      submissionsByTitle.get(normalizedTitle)!.push(submission);
+    }
+
+    const mergedSubmissions: LinkItem[] = [];
+
+    for (const [, titleSubmissions] of submissionsByTitle) {
+      if (titleSubmissions.length === 1) {
+        mergedSubmissions.push(titleSubmissions[0]);
+      } else {
+        console.log(
+          `Debug: Found ${titleSubmissions.length} versions of the same paper, keeping the latest (most recent submission)`
+        );
+
+        titleSubmissions.sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        });
+
+        let primarySubmission = titleSubmissions[0];
+        const acceptedSubmission = titleSubmissions.find((s) =>
+          s.slug.includes("proceedings")
+        );
+
+        console.log(`Debug: All versions: ${titleSubmissions.map(s => s.slug).join(", ")}`);
+
+        if (acceptedSubmission) {
+          primarySubmission = acceptedSubmission;
+          console.log(
+            `Debug: Found accepted/proceedings version, using it as primary (slug: ${acceptedSubmission.slug})`
+          );
+        } else {
+          console.log(`Debug: Using most recent submission as primary (slug: ${primarySubmission.slug})`);
+        }
+
+        const allTags = new Set<string>();
+        for (const submission of titleSubmissions) {
+          submission.tags.forEach((tag) => allTags.add(tag));
+        }
+
+        const bestDescription =
+          titleSubmissions
+            .map((s) => s.description)
+            .filter((desc): desc is string => desc !== null && desc.length > 0)
+            .sort((a, b) => b.length - a.length)[0] || null;
+
+        const mergedSubmission: LinkItem = {
+          ...primarySubmission,
+          description: bestDescription,
+          tags: Array.from(allTags),
+        };
+
+        mergedSubmissions.push(mergedSubmission);
+      }
+    }
+
+    console.log(
+      `Debug: After merging - ${mergedSubmissions.length} submissions returned`
+    );
+    return mergedSubmissions;
   } catch (error) {
     console.error("Error fetching OpenReview submissions:", error);
     return [];
