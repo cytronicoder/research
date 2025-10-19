@@ -41,7 +41,11 @@ async function getLinks(): Promise<LinkItem[]> {
           title: meta.title || null,
           description: meta.description || null,
           tags: meta.tags ? meta.tags.split(",") : [],
-          source: slug.startsWith("orcid-") ? ("orcid" as const) : ("manual" as const),
+          source: slug.startsWith("orcid-") 
+            ? ("orcid" as const) 
+            : slug.startsWith("openreview-") 
+              ? ("openreview" as const) 
+              : ("manual" as const),
           clicks: Number((await redis.get(`count:${slug}`)) || 0),
           createdAt: meta.createdAt || null,
         };
@@ -49,6 +53,9 @@ async function getLinks(): Promise<LinkItem[]> {
     );
 
     const manualLinks = links.filter(link => link.source === "manual");
+    const orcidLinks = links.filter(link => link.source === "orcid");
+
+    console.log(`Debug: Redis links - Total: ${links.length}, Manual: ${manualLinks.length}, ORCID: ${orcidLinks.length}`);
 
     return manualLinks;
   } catch (error) {
@@ -62,6 +69,12 @@ export default async function Home() {
   const orcidWorks = await getOrcidWorks(process.env.ORCID_ID || "");
   const openReviewSubmissions = await getOpenReviewSubmissions(process.env.OPENREVIEW_USER_ID || "");
   const allLinks = [...manualLinks, ...orcidWorks, ...openReviewSubmissions];
+
+  console.log("Debug: Project loading summary");
+  console.log(`Manual links: ${manualLinks.length}`);
+  console.log(`ORCID works: ${orcidWorks.length}`);
+  console.log(`OpenReview submissions: ${openReviewSubmissions.length}`);
+  console.log(`Total projects: ${allLinks.length}`);
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">

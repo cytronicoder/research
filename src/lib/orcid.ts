@@ -53,7 +53,10 @@ interface LinkItem {
 import { getRedisClient } from "./redis";
 
 export async function getOrcidWorks(orcidId: string): Promise<LinkItem[]> {
+  console.log(`Debug: Fetching ORCID works for ID: ${orcidId}`);
+
   if (!orcidId) {
+    console.log("Debug: No ORCID ID provided, returning empty array");
     return [];
   }
 
@@ -73,6 +76,8 @@ export async function getOrcidWorks(orcidId: string): Promise<LinkItem[]> {
     }
 
     const data = await response.json();
+    console.log(`Debug: ORCID API returned ${data.group?.length || 0} work groups`);
+
     const redis = await getRedisClient();
 
     const works = await Promise.all(
@@ -146,6 +151,7 @@ export async function getOrcidWorks(orcidId: string): Promise<LinkItem[]> {
       })
     );
 
+    console.log(`Debug: ORCID processing complete - ${works.length} works returned`);
     return works;
   } catch (error) {
     console.error("Error fetching ORCID works:", error);

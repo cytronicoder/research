@@ -29,6 +29,9 @@ interface SearchableProjectsProps {
 }
 
 export default function SearchableProjects({ initialLinks }: SearchableProjectsProps) {
+    console.log(`Debug: SearchableProjects initialized with ${initialLinks.length} total links`);
+    console.log(`Debug: Source breakdown - Manual: ${initialLinks.filter(l => l.source === 'manual').length}, ORCID: ${initialLinks.filter(l => l.source === 'orcid').length}, OpenReview: ${initialLinks.filter(l => l.source === 'openreview').length}`);
+
     const [searchQuery, setSearchQuery] = useState("");
     const [sourceFilter, setSourceFilter] = useState<"all" | "manual" | "orcid" | "openreview">("all");
     const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -79,6 +82,7 @@ export default function SearchableProjects({ initialLinks }: SearchableProjectsP
 
                     setFilteredLinks(tagFilteredLinks);
                     setHighlights({});
+                    console.log(`Debug: Client-side filtering - Query: "${searchQuery}", Source: ${sourceFilter}, Tag: ${selectedTag || 'none'}, Results: ${tagFilteredLinks.length}`);
                 }
             } catch (error) {
                 console.error('Search failed:', error);
@@ -103,6 +107,7 @@ export default function SearchableProjects({ initialLinks }: SearchableProjectsP
 
                 setFilteredLinks(tagFilteredLinks);
                 setHighlights({});
+                console.log(`Debug: Fallback filtering - Query: "${searchQuery}", Source: ${sourceFilter}, Tag: ${selectedTag || 'none'}, Results: ${tagFilteredLinks.length}`);
             } finally {
                 setIsSearching(false);
             }
@@ -136,6 +141,8 @@ export default function SearchableProjects({ initialLinks }: SearchableProjectsP
                 return 0;
         }
     });
+
+    console.log(`Debug: Sorting applied - Sort by: ${sortBy}, Filtered links: ${filteredLinks.length}, Sorted links: ${sortedLinks.length}`);
 
     const hasOrcid = initialLinks.some(link => link.source === 'orcid');
     const hasManual = initialLinks.some(link => link.source === 'manual');
