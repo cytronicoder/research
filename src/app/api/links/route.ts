@@ -194,7 +194,9 @@ export async function PUT(req: NextRequest) {
       metadata.createdAt = existingMeta.createdAt;
     }
 
-    multi.hSet(`meta:${key}`, metadata);
+    const storedMetadata = { ...existingMeta, ...metadata };
+
+    multi.hSet(`meta:${key}`, storedMetadata);
     await multi.exec();
 
     const finalTarget = target || (await redis.get(`link:${key}`));
@@ -204,7 +206,7 @@ export async function PUT(req: NextRequest) {
       slug: key,
       short: `${origin}/${key}`,
       target: finalTarget,
-      ...parseMetadata(metadata),
+      ...parseMetadata(storedMetadata),
     });
   } catch (error) {
     console.error(`Error updating link ${key}:`, error);
@@ -253,8 +255,12 @@ export async function GET(req: NextRequest) {
   const tag = searchParams.get("tag");
   const source = searchParams.get("source");
   const search = searchParams.get("search");
-  const limit = Math.min(parseInt(searchParams.get("limit") || "100"), 200);
-  const offset = parseInt(searchParams.get("offset") || "0");
+  const limitParam = parseInt(searchParams.get("limit") || "", 10);
+  const offsetParam = parseInt(searchParams.get("offset") || "", 10);
+  const limit = Number.isNaN(limitParam)
+    ? 100
+    : Math.min(Math.max(limitParam, 1), 200);
+  const offset = Number.isNaN(offsetParam) || offsetParam < 0 ? 0 : offsetParam;
 
   try {
     const keys = await redis.keys("link:*");
@@ -419,20 +425,76 @@ export async function DELETE(req: NextRequest) {
 
   const redis = await getRedisClient();
   const { searchParams } = new URL(req.url);
-  const slug = searchParams.get("slug");
-  const slugs = searchParams.get("slugs");
+  const slugParam = searchParams.get("slug");
+  let slugsParam = searchParams.get("slugs");
+  let bodySlug: string | undefined;
+  let bodySlugs: string[] | undefined;
 
-  if (!slug && !slugs) {
+  if (!slugParam && !slugsParam) {
+    try {
+      const body = await req.json();
+      if (body) {
+        if (typeof body.slug === "string") bodySlug = body.slug;
+        if (Array.isArray(body.slugs)) {
+          bodySlugs = body.slugs;
+        } else if (typeof body.slugs === "string") {
+          slugsParam = body.slugs;
+        }
+      }
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) {
+        console.error("Failed to parse DELETE body:", error);
+        return NextResponse.json(
+          { error: "invalid request body" },
+          { status: 400 }
+        );
+      }
+    }
+  }
+
+  const normalizeSlugValue = (value: string) =>
+    value.toLowerCase().replace(/^\/+/, "").trim();
+
+  const singleSlug = slugParam || bodySlug;
+  const bulkSlugs = bodySlugs
+    ? bodySlugs
+    : slugsParam
+    ? slugsParam.split(",").map((s) => s.trim())
+    : undefined;
+
+  if (!singleSlug && (!bulkSlugs || bulkSlugs.length === 0)) {
     return NextResponse.json(
       { error: "slug or slugs parameter required" },
       { status: 400 }
     );
   }
 
+  const deleteForKey = async (key: string) => {
+    const [linkDeleted, countDeleted, metaDeleted] = await Promise.all([
+      redis.del(`link:${key}`),
+      redis.del(`count:${key}`),
+      redis.del(`meta:${key}`),
+    ]);
+
+    return {
+      link: linkDeleted,
+      count: countDeleted,
+      meta: metaDeleted,
+    };
+  };
+
   try {
-    if (slug) {
-      const key = slug.toLowerCase().replace(/^\//, "");
-      const exists = await redis.exists(`link:${key}`);
+    if (singleSlug) {
+      const normalized = normalizeSlugValue(singleSlug);
+
+      if (!normalized || !isValidSlug(normalized)) {
+        return NextResponse.json(
+          { error: "invalid slug format" },
+          { status: 400 }
+        );
+      }
+
+      const exists = await redis.exists(`link:${normalized}`);
 
       if (!exists) {
         return NextResponse.json(
@@ -441,70 +503,69 @@ export async function DELETE(req: NextRequest) {
         );
       }
 
-      console.log(`Deleting link:${key}`);
+      console.log(`Deleting link:${normalized}`);
 
-      const multi = redis.multi();
-      multi.del(`link:${key}`);
-      multi.del(`count:${key}`);
-      multi.del(`meta:${key}`);
-
-      const results = await multi.exec();
-
-      const keysDeleted = {
-        link: results?.[0] ? 1 : 0,
-        count: results?.[1] ? 1 : 0,
-        meta: results?.[2] ? 1 : 0,
-      };
-
-      console.log(`Deleted link:${key}`, keysDeleted);
+      const keysDeleted = await deleteForKey(normalized);
 
       return NextResponse.json({
-        deleted: [key],
+        deleted: [normalized],
         keysDeleted,
       });
     }
 
-    if (slugs) {
-      const slugArray = slugs
-        .split(",")
-        .map((s) => s.trim())
-        .filter((s) => s);
-      const deleted: string[] = [];
-      const notFound: string[] = [];
+    if (bulkSlugs && bulkSlugs.length > 0) {
+      const normalizedSlugs = Array.from(
+        new Set(
+          bulkSlugs
+            .map((s) => normalizeSlugValue(s))
+            .filter((s) => s && isValidSlug(s))
+        )
+      );
+
+      if (normalizedSlugs.length === 0) {
+        return NextResponse.json(
+          { error: "no valid slugs provided" },
+          { status: 400 }
+        );
+      }
 
       const existenceChecks = await Promise.all(
-        slugArray.map(async (s) => {
-          const key = s.toLowerCase().replace(/^\//, "");
+        normalizedSlugs.map(async (key) => {
           const exists = await redis.exists(`link:${key}`);
           return { key, exists: exists > 0 };
         })
       );
 
-      const multi = redis.multi();
-      for (const { key, exists } of existenceChecks) {
-        if (exists) {
-          multi.del(`link:${key}`);
-          multi.del(`count:${key}`);
-          multi.del(`meta:${key}`);
-          deleted.push(key);
-        } else {
-          notFound.push(key);
+      const deleted: string[] = [];
+      const notFound: string[] = [];
+
+      const deletionResults = await Promise.all(
+        existenceChecks
+          .filter(({ exists }) => exists)
+          .map(async ({ key }) => {
+            const result = await deleteForKey(key);
+            deleted.push(key);
+            return { key, result };
+          })
+      );
+
+      for (const check of existenceChecks) {
+        if (!check.exists) {
+          notFound.push(check.key);
         }
       }
 
-      if (deleted.length > 0) {
-        await multi.exec();
-        console.log(`Bulk deleted ${deleted.length} links:`, deleted);
-      }
+      const summary = {
+        deleted: deleted.length,
+        notFound: notFound.length,
+        total: normalizedSlugs.length,
+      };
 
       return NextResponse.json({
         deleted,
         notFound: notFound.length > 0 ? notFound : undefined,
-        summary: {
-          deleted: deleted.length,
-          notFound: notFound.length,
-          total: slugArray.length,
-        },
+        summary,
+        details: deletionResults,
       });
     }
   } catch (error) {
