@@ -762,6 +762,7 @@ export default function AdminDashboard() {
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <Link
                                                     href={link.shortUrl}
+                                                    prefetch={false}
                                                     className="text-blue-600 dark:text-blue-400 hover:underline font-mono font-medium"
                                                 >
                                                     /{link.slug}
