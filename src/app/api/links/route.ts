@@ -471,7 +471,6 @@ export async function DELETE(req: NextRequest) {
         .filter((s) => s);
       const deleted: string[] = [];
       const notFound: string[] = [];
-      const errors: Array<{ slug: string; error: string }> = [];
 
       const existenceChecks = await Promise.all(
         slugArray.map(async (s) => {

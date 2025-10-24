@@ -68,12 +68,6 @@ export default function AdminDashboard() {
         }
     }, []);
 
-    useEffect(() => {
-        if (showAnalytics && isAuthenticated) {
-            fetchAnalytics();
-        }
-    }, [showAnalytics, analyticsPeriod, isAuthenticated]);
-
     function handleSelectAll() {
         if (selectedLinks.size === filteredLinks.length) {
             setSelectedLinks(new Set());
@@ -97,7 +91,7 @@ export default function AdminDashboard() {
         setAuthError("");
 
         try {
-            const response = await fetch("/api/links?slug=test", {
+            const response = await fetch("/api/auth", {
                 headers: {
                     "x-admin-key": password,
                 },
@@ -166,6 +160,12 @@ export default function AdminDashboard() {
             console.error("Failed to fetch analytics:", err);
         }
     }, [analyticsPeriod]);
+
+    useEffect(() => {
+        if (showAnalytics && isAuthenticated) {
+            fetchAnalytics();
+        }
+    }, [showAnalytics, analyticsPeriod, isAuthenticated, fetchAnalytics]);
 
     async function handleBulkDelete() {
         if (selectedLinks.size === 0 || isDeleting) return;
@@ -276,7 +276,7 @@ export default function AdminDashboard() {
             } else {
                 alert("Failed to update link");
             }
-        } catch (_err) {
+        } catch {
             alert("Error updating link");
         }
     }
@@ -306,7 +306,7 @@ export default function AdminDashboard() {
             } else {
                 alert("Failed to add tags");
             }
-        } catch (_err) {
+        } catch {
             alert("Error adding tags");
         }
     }
@@ -336,7 +336,7 @@ export default function AdminDashboard() {
             } else {
                 alert("Failed to remove tags");
             }
-        } catch (_err) {
+        } catch {
             alert("Error removing tags");
         }
     }
@@ -361,7 +361,7 @@ export default function AdminDashboard() {
             } else {
                 alert("Failed to export data");
             }
-        } catch (_err) {
+        } catch {
             alert("Error exporting data");
         }
     }
