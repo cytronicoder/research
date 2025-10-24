@@ -135,6 +135,7 @@ export async function GET(req: NextRequest) {
   const offset = parseInt(searchParams.get("offset") || "0");
 
   const keys = await redis.keys("link:*");
+  console.log(`Found ${keys.length} keys in Redis:`, keys);
   const results = [];
 
   for (const key of keys) {
@@ -264,23 +265,55 @@ export async function DELETE(req: NextRequest) {
 
   if (slug) {
     const key = slug.toLowerCase().replace(/^\//, "");
-    await redis.del(`link:${key}`);
-    await redis.del(`count:${key}`);
-    await redis.del(`meta:${key}`);
-    return NextResponse.json({ deleted: [key] });
+    const exists = await redis.exists(`link:${key}`);
+    console.log(`Deleting link:${key}, exists: ${exists}`);
+    const deletedLink = await redis.del(`link:${key}`);
+    const deletedCount = await redis.del(`count:${key}`);
+    const deletedMeta = await redis.del(`meta:${key}`);
+
+    console.log(
+      `Deleted keys - link: ${deletedLink}, count: ${deletedCount}, meta: ${deletedMeta}`
+    );
+
+    return NextResponse.json({
+      deleted: [key],
+      existed: exists > 0,
+      keysDeleted: {
+        link: deletedLink,
+        count: deletedCount,
+        meta: deletedMeta,
+      },
+    });
   } else if (slugs) {
     const slugArray = slugs.split(",");
     const deleted = [];
+    const results = [];
 
     for (const s of slugArray) {
       const key = s.trim().toLowerCase().replace(/^\//, "");
-      await redis.del(`link:${key}`);
-      await redis.del(`count:${key}`);
-      await redis.del(`meta:${key}`);
+      const exists = await redis.exists(`link:${key}`);
+      console.log(`Deleting link:${key}, exists: ${exists}`);
+      const deletedLink = await redis.del(`link:${key}`);
+      const deletedCount = await redis.del(`count:${key}`);
+      const deletedMeta = await redis.del(`meta:${key}`);
+
+      console.log(
+        `Deleted keys - link: ${deletedLink}, count: ${deletedCount}, meta: ${deletedMeta}`
+      );
+
       deleted.push(key);
+      results.push({
+        key,
+        existed: exists > 0,
+        keysDeleted: {
+          link: deletedLink,
+          count: deletedCount,
+          meta: deletedMeta,
+        },
+      });
     }
 
-    return NextResponse.json({ deleted });
+    return NextResponse.json({ deleted, results });
   } else {
     return NextResponse.json(
       { error: "slug or slugs parameter required" },

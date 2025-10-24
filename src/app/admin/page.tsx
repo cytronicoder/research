@@ -58,6 +58,7 @@ export default function AdminDashboard() {
         target: string;
         tags: string[];
     } | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         const auth = sessionStorage.getItem("admin_authenticated");
@@ -117,14 +118,17 @@ export default function AdminDashboard() {
 
     async function fetchLinks() {
         setLoading(true);
+        console.log("Fetching links...");
         try {
-            const response = await fetch("/api/links", {
+            const response = await fetch(`/api/links?_t=${Date.now()}`, {
                 headers: {
                     "x-admin-key": sessionStorage.getItem("admin_key") || "",
                 },
+                cache: "no-store",
             });
             if (!response.ok) throw new Error("Failed to fetch links");
             const data = await response.json();
+            console.log("Fetched links data:", data);
 
             const transformedLinks = data.links.map((link: ApiLinkItem) => ({
                 slug: link.slug,
@@ -137,8 +141,10 @@ export default function AdminDashboard() {
                 createdAt: link.metadata?.createdAt || null,
             }));
 
+            console.log("Setting links, count:", transformedLinks.length);
             setLinks(transformedLinks);
         } catch (err) {
+            console.error("Error fetching links:", err);
             setError(err instanceof Error ? err.message : "Failed to load links");
         } finally {
             setLoading(false);
@@ -162,9 +168,13 @@ export default function AdminDashboard() {
     }, [analyticsPeriod]);
 
     async function handleBulkDelete() {
-        if (selectedLinks.size === 0) return;
+        if (selectedLinks.size === 0 || isDeleting) return;
+
+        if (!confirm(`Are you sure you want to delete ${selectedLinks.size} link${selectedLinks.size === 1 ? "" : "s"}?`)) return;
 
         const slugs = Array.from(selectedLinks).join(",");
+        console.log("Deleting slugs:", slugs);
+        setIsDeleting(true);
         try {
             const response = await fetch(`/api/links?slugs=${slugs}`, {
                 method: "DELETE",
@@ -173,20 +183,32 @@ export default function AdminDashboard() {
                 },
             });
 
+            console.log("Delete response:", response.status);
             if (response.ok) {
+                const result = await response.json();
+                console.log("Deleted:", result);
                 setSelectedLinks(new Set());
-                fetchLinks();
+                await fetchLinks();
             } else {
-                alert("Failed to delete selected links");
+                const error = await response.text();
+                console.error("Delete failed:", error);
+                alert(`Failed to delete selected links: ${error}`);
             }
-        } catch (_err) {
-            alert("Error deleting links");
+        } catch (err) {
+            console.error("Delete error:", err);
+            alert(`Error deleting links: ${err}`);
+        } finally {
+            setIsDeleting(false);
         }
     }
 
     async function handleIndividualDelete(slug: string) {
+        if (isDeleting) return;
+
         if (!confirm(`Are you sure you want to delete the link "/${slug}"?`)) return;
 
+        console.log("Deleting individual slug:", slug);
+        setIsDeleting(true);
         try {
             const response = await fetch(`/api/links?slug=${slug}`, {
                 method: "DELETE",
@@ -195,13 +217,21 @@ export default function AdminDashboard() {
                 },
             });
 
+            console.log("Delete response:", response.status);
             if (response.ok) {
-                fetchLinks();
+                const result = await response.json();
+                console.log("Deleted:", result);
+                await fetchLinks();
             } else {
-                alert("Failed to delete link");
+                const error = await response.text();
+                console.error("Delete failed:", error);
+                alert(`Failed to delete link: ${error}`);
             }
-        } catch (_err) {
-            alert("Error deleting link");
+        } catch (err) {
+            console.error("Delete error:", err);
+            alert(`Error deleting link: ${err}`);
+        } finally {
+            setIsDeleting(false);
         }
     }
 
@@ -643,9 +673,10 @@ export default function AdminDashboard() {
                                 </button>
                                 <button
                                     onClick={handleBulkDelete}
-                                    className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+                                    disabled={isDeleting}
+                                    className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    Delete
+                                    {isDeleting ? "Deleting..." : "Delete"}
                                 </button>
                             </div>
                         </div>
@@ -876,9 +907,10 @@ export default function AdminDashboard() {
                                                             </button>
                                                             <button
                                                                 onClick={() => handleIndividualDelete(link.slug)}
-                                                                className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+                                                                disabled={isDeleting}
+                                                                className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                             >
-                                                                Delete
+                                                                {isDeleting ? "Deleting..." : "Delete"}
                                                             </button>
                                                         </>
                                                     )}
