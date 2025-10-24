@@ -51,6 +51,13 @@ export default function AdminDashboard() {
     const [showAnalytics, setShowAnalytics] = useState(false);
     const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
     const [analyticsPeriod, setAnalyticsPeriod] = useState<"all" | "week" | "month" | "year">("all");
+    const [editingSlug, setEditingSlug] = useState<string | null>(null);
+    const [editValues, setEditValues] = useState<{
+        title: string;
+        description: string;
+        target: string;
+        tags: string[];
+    } | null>(null);
 
     useEffect(() => {
         const auth = sessionStorage.getItem("admin_authenticated");
@@ -174,6 +181,73 @@ export default function AdminDashboard() {
             }
         } catch (_err) {
             alert("Error deleting links");
+        }
+    }
+
+    async function handleIndividualDelete(slug: string) {
+        if (!confirm(`Are you sure you want to delete the link "/${slug}"?`)) return;
+
+        try {
+            const response = await fetch(`/api/links?slug=${slug}`, {
+                method: "DELETE",
+                headers: {
+                    "x-admin-key": sessionStorage.getItem("admin_key") || "",
+                },
+            });
+
+            if (response.ok) {
+                fetchLinks();
+            } else {
+                alert("Failed to delete link");
+            }
+        } catch (_err) {
+            alert("Error deleting link");
+        }
+    }
+
+    function handleStartEdit(link: LinkItem) {
+        setEditingSlug(link.slug);
+        setEditValues({
+            title: link.title || "",
+            description: link.description || "",
+            target: link.target,
+            tags: [...link.tags],
+        });
+    }
+
+    function handleCancelEdit() {
+        setEditingSlug(null);
+        setEditValues(null);
+    }
+
+    async function handleSaveEdit() {
+        if (!editingSlug || !editValues) return;
+
+        try {
+            const response = await fetch("/api/links", {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-admin-key": sessionStorage.getItem("admin_key") || "",
+                },
+                body: JSON.stringify({
+                    slug: editingSlug,
+                    target: editValues.target,
+                    title: editValues.title,
+                    description: editValues.description,
+                    tags: editValues.tags,
+                }),
+            });
+
+            if (response.ok) {
+                setEditingSlug(null);
+                setEditValues(null);
+                fetchLinks();
+            } else {
+                alert("Failed to update link");
+            }
+        } catch (_err) {
+            alert("Error updating link");
         }
     }
 
@@ -666,6 +740,9 @@ export default function AdminDashboard() {
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Clicks
                                         </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            Actions
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -691,45 +768,120 @@ export default function AdminDashboard() {
                                                 </Link>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                    {link.title || <span className="text-gray-400 italic">No title</span>}
-                                                </div>
+                                                {editingSlug === link.slug ? (
+                                                    <input
+                                                        type="text"
+                                                        value={editValues?.title || ""}
+                                                        onChange={(e) => setEditValues(prev => prev ? { ...prev, title: e.target.value } : null)}
+                                                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                                        placeholder="Enter title"
+                                                    />
+                                                ) : (
+                                                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                        {link.title || <span className="text-gray-400 italic">No title</span>}
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 max-w-xs">
-                                                <div className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                                                    {link.description || <span className="italic">No description</span>}
-                                                </div>
+                                                {editingSlug === link.slug ? (
+                                                    <textarea
+                                                        value={editValues?.description || ""}
+                                                        onChange={(e) => setEditValues(prev => prev ? { ...prev, description: e.target.value } : null)}
+                                                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                                                        placeholder="Enter description"
+                                                        rows={2}
+                                                    />
+                                                ) : (
+                                                    <div className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                                                        {link.description || <span className="italic">No description</span>}
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex flex-wrap gap-1">
-                                                    {link.tags.length > 0 ? (
-                                                        link.tags.map((tag) => (
-                                                            <span
-                                                                key={tag}
-                                                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
-                                                            >
-                                                                {tag}
-                                                            </span>
-                                                        ))
-                                                    ) : (
-                                                        <span className="text-sm text-gray-400 italic">No tags</span>
-                                                    )}
-                                                </div>
+                                                {editingSlug === link.slug ? (
+                                                    <input
+                                                        type="text"
+                                                        value={editValues?.tags.join(", ") || ""}
+                                                        onChange={(e) => setEditValues(prev => prev ? { ...prev, tags: e.target.value.split(",").map(t => t.trim()).filter(t => t) } : null)}
+                                                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                                        placeholder="tag1, tag2, tag3"
+                                                    />
+                                                ) : (
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {link.tags.length > 0 ? (
+                                                            link.tags.map((tag) => (
+                                                                <span
+                                                                    key={tag}
+                                                                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
+                                                                >
+                                                                    {tag}
+                                                                </span>
+                                                            ))
+                                                        ) : (
+                                                            <span className="text-sm text-gray-400 italic">No tags</span>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <a
-                                                    href={link.target}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 hover:underline max-w-md truncate block text-sm"
-                                                >
-                                                    {link.target}
-                                                </a>
+                                                {editingSlug === link.slug ? (
+                                                    <input
+                                                        type="url"
+                                                        value={editValues?.target || ""}
+                                                        onChange={(e) => setEditValues(prev => prev ? { ...prev, target: e.target.value } : null)}
+                                                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                                        placeholder="https://example.com"
+                                                    />
+                                                ) : (
+                                                    <a
+                                                        href={link.target}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 hover:underline max-w-md truncate block text-sm"
+                                                    >
+                                                        {link.target}
+                                                    </a>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
                                                     {link.clicks.toLocaleString()}
                                                 </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex gap-2">
+                                                    {editingSlug === link.slug ? (
+                                                        <>
+                                                            <button
+                                                                onClick={handleSaveEdit}
+                                                                className="px-3 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
+                                                            >
+                                                                Save
+                                                            </button>
+                                                            <button
+                                                                onClick={handleCancelEdit}
+                                                                className="px-3 py-1 text-xs bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <button
+                                                                onClick={() => handleStartEdit(link)}
+                                                                className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleIndividualDelete(link.slug)}
+                                                                className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
