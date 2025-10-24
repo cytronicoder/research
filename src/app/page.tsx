@@ -1,7 +1,6 @@
 import { getRedisClient } from "@/lib/redis";
 import SearchableProjects from "@/components/SearchableProjects";
 import { getOrcidWorks } from "@/lib/orcid";
-import { getOpenReviewSubmissions } from "@/lib/openreview";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -13,7 +12,7 @@ interface LinkItem {
   title: string | null;
   description: string | null;
   tags: string[];
-  source: "manual" | "orcid" | "openreview";
+  source: "manual" | "orcid";
   clicks: number;
   createdAt?: string | null;
 }
@@ -60,8 +59,7 @@ async function getLinks(): Promise<LinkItem[]> {
 export default async function Home() {
   const manualLinks = await getLinks();
   const orcidWorks = await getOrcidWorks(process.env.ORCID_ID || "");
-  const openReviewSubmissions = await getOpenReviewSubmissions(process.env.OPENREVIEW_USER_ID || "");
-  const allLinks = [...manualLinks, ...orcidWorks, ...openReviewSubmissions];
+  const allLinks = [...manualLinks, ...orcidWorks];
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">

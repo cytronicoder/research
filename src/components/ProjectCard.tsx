@@ -8,7 +8,7 @@ interface ProjectCardProps {
     title: string | null;
     description: string | null;
     tags: string[];
-    source: "manual" | "orcid" | "openreview";
+    source: "manual" | "orcid";
     shortUrl: string;
     highlights?: string[];
 }
@@ -54,9 +54,6 @@ export default function ProjectCard({
                     <div className="flex items-center gap-3 mb-2">
                         {source === 'orcid' && (
                             <Image src="/orcid.svg" alt="ORCID" width={20} height={20} className="dark:invert" />
-                        )}
-                        {source === 'openreview' && (
-                            <Image src="/openreview.svg" alt="OpenReview" width={20} height={20} className="dark:invert" />
                         )}
                         <h2 className="text-xl font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                             {highlightText(displayTitle, highlights)}

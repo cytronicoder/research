@@ -7,7 +7,7 @@ interface LinkItem {
     title: string | null;
     description: string | null;
     tags: string[];
-    source: "manual" | "orcid" | "openreview";
+    source: "manual" | "orcid";
 }
 
 interface ProjectListProps {

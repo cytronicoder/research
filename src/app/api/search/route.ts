@@ -11,7 +11,7 @@ interface SearchResult {
   title: string | null;
   description: string | null;
   tags: string[];
-  source: "manual" | "orcid" | "openreview";
+  source: "manual" | "orcid";
   score: number;
   highlights: {
     title?: string[];
@@ -94,9 +94,8 @@ export async function GET(req: NextRequest) {
     const description = meta.description || "";
     const tags = meta.tags ? meta.tags.split(",").map((t) => t.trim()) : [];
 
-    let entrySource: "manual" | "orcid" | "openreview" = "manual";
+    let entrySource: "manual" | "orcid" = "manual";
     if (slug.startsWith("orcid-")) entrySource = "orcid";
-    else if (slug.startsWith("openreview-")) entrySource = "openreview";
 
     if (source && entrySource !== source) continue;
     if (tag && !tags.includes(tag)) continue;

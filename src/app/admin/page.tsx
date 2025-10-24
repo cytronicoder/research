@@ -29,7 +29,7 @@ interface LinkItem {
 interface AnalyticsData {
     totalLinks: number;
     totalClicks: number;
-    sources: { manual: number; orcid: number; openreview: number };
+    sources: { manual: number; orcid: number };
     topTags: [string, number][];
     recentActivity: Array<{ slug: string, clicks: number, lastAccessed?: string }>;
     topPerformers: Array<{ slug: string, clicks: number, title?: string }>;
@@ -522,10 +522,6 @@ export default function AdminDashboard() {
                                         <div className="flex justify-between">
                                             <span className="text-gray-600 dark:text-gray-400">ORCID:</span>
                                             <span className="font-medium">{analytics.sources.orcid}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600 dark:text-gray-400">OpenReview:</span>
-                                            <span className="font-medium">{analytics.sources.openreview}</span>
                                         </div>
                                     </div>
                                 </div>

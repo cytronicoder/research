@@ -19,7 +19,6 @@ export async function GET(req: NextRequest) {
     const sourceCounts: Record<string, number> = {
       manual: 0,
       orcid: 0,
-      openreview: 0,
     };
     let totalClicks = 0;
     let totalLinks = 0;
@@ -42,7 +41,6 @@ export async function GET(req: NextRequest) {
       }
 
       if (slug.startsWith("orcid-")) sourceCounts.orcid++;
-      else if (slug.startsWith("openreview-")) sourceCounts.openreview++;
       else sourceCounts.manual++;
     }
 

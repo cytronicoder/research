@@ -25,9 +25,8 @@ export async function GET(req: NextRequest) {
 
     if (!target) continue;
 
-    let entrySource: "manual" | "orcid" | "openreview" = "manual";
+    let entrySource: "manual" | "orcid" = "manual";
     if (slug.startsWith("orcid-")) entrySource = "orcid";
-    else if (slug.startsWith("openreview-")) entrySource = "openreview";
 
     if (source && entrySource !== source) continue;
 

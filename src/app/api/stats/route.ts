@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   const stats = {
     totalLinks: 0,
     totalClicks: 0,
-    sources: { manual: 0, orcid: 0, openreview: 0 },
+    sources: { manual: 0, orcid: 0 },
     tags: {} as Record<string, number>,
     recentActivity: [] as Array<{
       slug: string;
@@ -59,7 +59,6 @@ export async function GET(req: NextRequest) {
     stats.totalClicks += clicks;
 
     if (slug.startsWith("orcid-")) stats.sources.orcid++;
-    else if (slug.startsWith("openreview-")) stats.sources.openreview++;
     else stats.sources.manual++;
 
     if (meta.tags) {
