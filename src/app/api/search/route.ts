@@ -141,17 +141,24 @@ export async function GET(req: NextRequest) {
     const paginatedResults = results.slice(offset, offset + limit);
     const total = results.length;
 
-    return NextResponse.json({
-      query: query || null,
-      filters: { tag, source },
-      results: paginatedResults,
-      pagination: {
-        total,
-        limit,
-        offset,
-        hasMore: offset + limit < total,
+    return NextResponse.json(
+      {
+        query: query || null,
+        filters: { tag, source },
+        results: paginatedResults,
+        pagination: {
+          total,
+          limit,
+          offset,
+          hasMore: offset + limit < total,
+        },
       },
-    });
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error performing search:", error);
     return NextResponse.json(

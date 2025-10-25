@@ -23,5 +23,9 @@ export async function GET(
 
   const res = NextResponse.redirect(target, 301);
   res.headers.set("X-Robots-Tag", "noindex");
+  res.headers.set(
+    "Cache-Control",
+    "public, s-maxage=300, stale-while-revalidate=600"
+  );
   return res;
 }
