@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRedisClient } from "@/lib/redis";
 
-function unauthorized() {
-  return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-}
-
 interface SearchResult {
   slug: string;
   target: string;
@@ -59,9 +55,6 @@ function highlightText(text: string, query: string): string[] {
 }
 
 export async function GET(req: NextRequest) {
-  if (req.headers.get("x-admin-key") !== process.env.ADMIN_KEY)
-    return unauthorized();
-
   const redis = await getRedisClient();
   const { searchParams } = new URL(req.url);
   const query = searchParams.get("q");
