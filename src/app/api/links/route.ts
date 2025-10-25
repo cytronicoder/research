@@ -75,104 +75,112 @@ export async function POST(req: NextRequest) {
   if (req.headers.get("x-admin-key") !== process.env.ADMIN_KEY)
     return unauthorized();
 
-  const { links } = await req.json();
-  if (!links || !Array.isArray(links))
-    return NextResponse.json(
-      { error: "links array required" },
-      { status: 400 }
-    );
+  try {
+    const { links } = await req.json();
+    if (!links || !Array.isArray(links))
+      return NextResponse.json(
+        { error: "links array required" },
+        { status: 400 }
+      );
 
-  const redis = await getRedisClient();
-  const results = [];
-  const origin = new URL(req.url).origin;
+    const redis = await getRedisClient();
+    const results = [];
+    const origin = new URL(req.url).origin;
 
-  for (const link of links) {
-    const { slug, target, permanent, title, description, tags } = link;
-    if (!slug || !target) {
-      results.push({ slug, error: "slug and target required" });
-      continue;
-    }
+    for (const link of links) {
+      const { slug, target, permanent, title, description, tags } = link;
+      if (!slug || !target) {
+        results.push({ slug, error: "slug and target required" });
+        continue;
+      }
 
-    const key = slug.toLowerCase().replace(/^\//, "");
-    if (!isValidSlug(key)) {
-      results.push({
-        slug,
-        error:
-          "invalid slug format (use only letters, numbers, hyphens, underscores)",
-      });
-      continue;
-    }
-
-    if (!/^https?:\/\//i.test(target)) {
-      results.push({ slug, error: "target must start with http(s)://" });
-      continue;
-    }
-
-    try {
-      const exists = await redis.exists(`link:${key}`);
-      if (exists) {
+      const key = slug.toLowerCase().replace(/^\//, "");
+      if (!isValidSlug(key)) {
         results.push({
-          slug: key,
-          error: "link already exists, use PUT to update",
+          slug,
+          error:
+            "invalid slug format (use only letters, numbers, hyphens, underscores)",
         });
         continue;
       }
 
-      const multi = redis.multi();
-      multi.set(`link:${key}`, target);
-      multi.set(`count:${key}`, "0");
+      if (!/^https?:\/\//i.test(target)) {
+        results.push({ slug, error: "target must start with http(s)://" });
+        continue;
+      }
 
-      const metadata = prepareMetadata(
-        { permanent, title, description, tags },
-        false
-      );
-      multi.hSet(`meta:${key}`, metadata);
+      try {
+        const exists = await redis.exists(`link:${key}`);
+        if (exists) {
+          results.push({
+            slug: key,
+            error: "link already exists, use PUT to update",
+          });
+          continue;
+        }
 
-      await multi.exec();
+        const multi = redis.multi();
+        multi.set(`link:${key}`, target);
+        multi.set(`count:${key}`, "0");
 
-      results.push({
-        slug: key,
-        short: `${origin}/${key}`,
-        target,
-        ...parseMetadata(metadata),
-      });
-    } catch (error) {
-      console.error(`Error creating link ${key}:`, error);
-      results.push({ slug: key, error: "failed to create link" });
+        const metadata = prepareMetadata(
+          { permanent, title, description, tags },
+          false
+        );
+        multi.hSet(`meta:${key}`, metadata);
+
+        await multi.exec();
+
+        results.push({
+          slug: key,
+          short: `${origin}/${key}`,
+          target,
+          ...parseMetadata(metadata),
+        });
+      } catch (error) {
+        console.error(`Error creating link ${key}:`, error);
+        results.push({ slug: key, error: "failed to create link" });
+      }
     }
-  }
 
-  return NextResponse.json({ results });
+    return NextResponse.json({ results });
+  } catch (error) {
+    console.error("Error in POST /api/links:", error);
+    return NextResponse.json(
+      { error: "failed to process request" },
+      { status: 500 }
+    );
+  }
 }
 
 export async function PUT(req: NextRequest) {
   if (req.headers.get("x-admin-key") !== process.env.ADMIN_KEY)
     return unauthorized();
 
-  const { slug, target, permanent, title, description, tags } =
-    await req.json();
-  if (!slug)
-    return NextResponse.json({ error: "slug required" }, { status: 400 });
-
-  const redis = await getRedisClient();
-  const key = slug.toLowerCase().replace(/^\//, "");
-
-  if (!isValidSlug(key))
-    return NextResponse.json(
-      {
-        error:
-          "invalid slug format (use only letters, numbers, hyphens, underscores)",
-      },
-      { status: 400 }
-    );
-
-  if (target && !/^https?:\/\//i.test(target))
-    return NextResponse.json(
-      { error: "target must start with http(s)://" },
-      { status: 400 }
-    );
-
   try {
+    const { slug, target, permanent, title, description, tags } =
+      await req.json();
+    if (!slug)
+      return NextResponse.json({ error: "slug required" }, { status: 400 });
+
+    const redis = await getRedisClient();
+    const key = slug.toLowerCase().replace(/^\//, "");
+
+    if (!isValidSlug(key))
+      return NextResponse.json(
+        {
+          error:
+            "invalid slug format (use only letters, numbers, hyphens, underscores)",
+        },
+        { status: 400 }
+      );
+
+    if (target && !/^https?:\/\//i.test(target))
+      return NextResponse.json(
+        { error: "target must start with http(s)://" },
+        { status: 400 }
+      );
+
     const exists = await redis.exists(`link:${key}`);
     if (!exists) {
       return NextResponse.json({ error: "link not found" }, { status: 404 });
@@ -207,7 +215,7 @@ export async function PUT(req: NextRequest) {
       ...parseMetadata(metadata),
     });
   } catch (error) {
-    console.error(`Error updating link ${key}:`, error);
+    console.error("Error updating link:", error);
     return NextResponse.json(
       { error: "failed to update link" },
       { status: 500 }
@@ -343,74 +351,82 @@ export async function PATCH(req: NextRequest) {
   if (req.headers.get("x-admin-key") !== process.env.ADMIN_KEY)
     return unauthorized();
 
-  const { slugs, updates } = await req.json();
-  if (!slugs || !Array.isArray(slugs) || !updates)
-    return NextResponse.json(
-      { error: "slugs array and updates object required" },
-      { status: 400 }
-    );
+  try {
+    const { slugs, updates } = await req.json();
+    if (!slugs || !Array.isArray(slugs) || !updates)
+      return NextResponse.json(
+        { error: "slugs array and updates object required" },
+        { status: 400 }
+      );
 
-  const redis = await getRedisClient();
-  const results = [];
+    const redis = await getRedisClient();
+    const results = [];
 
-  for (const slug of slugs) {
-    try {
-      const key = slug.toLowerCase().replace(/^\//, "");
+    for (const slug of slugs) {
+      try {
+        const key = slug.toLowerCase().replace(/^\//, "");
 
-      const [exists, existingMeta] = await Promise.all([
-        redis.exists(`link:${key}`),
-        redis.hGetAll(`meta:${key}`),
-      ]);
+        const [exists, existingMeta] = await Promise.all([
+          redis.exists(`link:${key}`),
+          redis.hGetAll(`meta:${key}`),
+        ]);
 
-      if (!exists || Object.keys(existingMeta).length === 0) {
-        results.push({ slug: key, error: "not found" });
-        continue;
-      }
-
-      const updatedMeta = { ...existingMeta };
-
-      if (updates.title !== undefined) {
-        updatedMeta.title = updates.title || "";
-      }
-      if (updates.description !== undefined) {
-        updatedMeta.description = updates.description || "";
-      }
-      if (updates.tags !== undefined) {
-        updatedMeta.tags = Array.isArray(updates.tags)
-          ? updates.tags.filter((t: string) => t.trim()).join(",")
-          : updates.tags;
-      }
-      if (updates.permanent !== undefined) {
-        updatedMeta.permanent = updates.permanent ? "1" : "0";
-      }
-
-      updatedMeta.updatedAt = new Date().toISOString();
-
-      const multi = redis.multi();
-
-      if (updates.target) {
-        if (!/^https?:\/\//i.test(updates.target)) {
-          results.push({ slug: key, error: "invalid target URL" });
+        if (!exists || Object.keys(existingMeta).length === 0) {
+          results.push({ slug: key, error: "not found" });
           continue;
         }
-        multi.set(`link:${key}`, updates.target);
+
+        const updatedMeta = { ...existingMeta };
+
+        if (updates.title !== undefined) {
+          updatedMeta.title = updates.title || "";
+        }
+        if (updates.description !== undefined) {
+          updatedMeta.description = updates.description || "";
+        }
+        if (updates.tags !== undefined) {
+          updatedMeta.tags = Array.isArray(updates.tags)
+            ? updates.tags.filter((t: string) => t.trim()).join(",")
+            : updates.tags;
+        }
+        if (updates.permanent !== undefined) {
+          updatedMeta.permanent = updates.permanent ? "1" : "0";
+        }
+
+        updatedMeta.updatedAt = new Date().toISOString();
+
+        const multi = redis.multi();
+
+        if (updates.target) {
+          if (!/^https?:\/\//i.test(updates.target)) {
+            results.push({ slug: key, error: "invalid target URL" });
+            continue;
+          }
+          multi.set(`link:${key}`, updates.target);
+        }
+
+        multi.hSet(`meta:${key}`, updatedMeta);
+        await multi.exec();
+
+        results.push({
+          slug: key,
+          updated: true,
+          metadata: parseMetadata(updatedMeta),
+        });
+      } catch (error) {
+        console.error(`Error updating link ${slug}:`, error);
+        results.push({ slug, error: "failed to update" });
       }
-
-      multi.hSet(`meta:${key}`, updatedMeta);
-      await multi.exec();
-
-      results.push({
-        slug: key,
-        updated: true,
-        metadata: parseMetadata(updatedMeta),
-      });
-    } catch (error) {
-      console.error(`Error updating link ${slug}:`, error);
-      results.push({ slug, error: "failed to update" });
     }
-  }
 
-  return NextResponse.json({ results });
+    return NextResponse.json({ results });
+  } catch (error) {
+    console.error("Error in PATCH /api/links:", error);
+    return NextResponse.json(
+      { error: "failed to process request" },
+      { status: 500 }
+    );
+  }
 }
 
 export async function DELETE(req: NextRequest) {

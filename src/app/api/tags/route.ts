@@ -138,14 +138,14 @@ export async function POST(req: NextRequest) {
   if (req.headers.get("x-admin-key") !== process.env.ADMIN_KEY)
     return unauthorized();
 
-  const { slugs, tags } = await req.json();
-  if (!slugs || !Array.isArray(slugs) || !tags || !Array.isArray(tags))
-    return NextResponse.json(
-      { error: "slugs (array) and tags (array) required" },
-      { status: 400 }
-    );
-
   try {
+    const { slugs, tags } = await req.json();
+    if (!slugs || !Array.isArray(slugs) || !tags || !Array.isArray(tags))
+      return NextResponse.json(
+        { error: "slugs (array) and tags (array) required" },
+        { status: 400 }
+      );
+
     const redis = await getRedisClient();
     let updatedCount = 0;
 
@@ -175,14 +175,14 @@ export async function PATCH(req: NextRequest) {
   if (req.headers.get("x-admin-key") !== process.env.ADMIN_KEY)
     return unauthorized();
 
-  const { slugs, tags } = await req.json();
-  if (!slugs || !Array.isArray(slugs) || !tags || !Array.isArray(tags))
-    return NextResponse.json(
-      { error: "slugs (array) and tags (array) required" },
-      { status: 400 }
-    );
-
   try {
+    const { slugs, tags } = await req.json();
+    if (!slugs || !Array.isArray(slugs) || !tags || !Array.isArray(tags))
+      return NextResponse.json(
+        { error: "slugs (array) and tags (array) required" },
+        { status: 400 }
+      );
+
     const redis = await getRedisClient();
     let updatedCount = 0;
 
@@ -215,14 +215,14 @@ export async function PUT(req: NextRequest) {
   if (req.headers.get("x-admin-key") !== process.env.ADMIN_KEY)
     return unauthorized();
 
-  const { oldTag, newTag } = await req.json();
-  if (!oldTag || !newTag)
-    return NextResponse.json(
-      { error: "oldTag and newTag required" },
-      { status: 400 }
-    );
-
   try {
+    const { oldTag, newTag } = await req.json();
+    if (!oldTag || !newTag)
+      return NextResponse.json(
+        { error: "oldTag and newTag required" },
+        { status: 400 }
+      );
+
     const redis = await getRedisClient();
     const keys = await redis.keys("link:*");
 
@@ -261,11 +261,11 @@ export async function DELETE(req: NextRequest) {
   if (req.headers.get("x-admin-key") !== process.env.ADMIN_KEY)
     return unauthorized();
 
-  const { tag } = await req.json();
-  if (!tag)
-    return NextResponse.json({ error: "tag required" }, { status: 400 });
-
   try {
+    const { tag } = await req.json();
+    if (!tag)
+      return NextResponse.json({ error: "tag required" }, { status: 400 });
+
     const redis = await getRedisClient();
     const keys = await redis.keys("link:*");
 
