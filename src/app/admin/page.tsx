@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import ThemeToggle from "@/components/ThemeToggle";
 
 interface ApiLinkItem {
     slug: string;
@@ -474,10 +475,12 @@ export default function AdminDashboard() {
                             Admin Dashboard
                         </h1>
                     </div>
-                    <button
-                        onClick={handleLogout}
-                        className="px-4 py-2 text-sm font-medium border rounded-lg transition-colors"
-                        style={{
+                    <div className="flex items-center gap-3">
+                        <ThemeToggle />
+                        <button
+                            onClick={handleLogout}
+                            className="px-4 py-2 text-sm font-medium border rounded-lg transition-colors"
+                            style={{
                             color: 'var(--text-color)',
                             backgroundColor: 'var(--card-bg)',
                             borderColor: 'var(--card-border)'
@@ -485,6 +488,7 @@ export default function AdminDashboard() {
                     >
                         Logout
                     </button>
+                    </div>
                 </header>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">

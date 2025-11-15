@@ -6,8 +6,6 @@
   --primary-color: #6a8e7f;
   --text-color: #5c554c;
   --background-color: #fcfaf6;
-
-  /* Additional color variables for components */
   --card-bg: #ffffff;
   --card-border: #e5e7eb;
   --input-bg: #ffffff;
@@ -25,8 +23,6 @@
   --primary-color: #5f9ea0;
   --text-color: #f5f5dc;
   --background-color: #1a202c;
-
-  /* Dark theme component colors */
   --card-bg: #374151;
   --card-border: #4b5563;
   --input-bg: #374151;
