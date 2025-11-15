@@ -114,7 +114,11 @@ export default function SearchableProjects({ initialLinks }: SearchableProjectsP
         <>
             {hasOrcid && hasManual && (
                 <div className="mb-4 flex justify-center">
-                    <div className="flex space-x-1 rounded-lg bg-gray-200 dark:bg-gray-800 p-1">
+                    <div className="flex space-x-1 rounded-lg p-1" style={{
+                        backgroundColor: 'var(--card-bg)',
+                        borderColor: 'var(--card-border)',
+                        border: '1px solid'
+                    }}>
                         <button onClick={() => setSourceFilter('all')} className={`px-3 py-1 text-sm font-medium rounded-md transition-colors`} style={{
                             backgroundColor: sourceFilter === 'all' ? 'var(--primary-color)' : 'transparent',
                             color: sourceFilter === 'all' ? 'white' : 'var(--text-color)',

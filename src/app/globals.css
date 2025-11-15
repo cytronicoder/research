@@ -15,6 +15,9 @@
   --error-bg: #fef2f2;
   --error-border: #fecaca;
   --error-text: #dc2626;
+  --badge-bg: #dbeafe;
+  --badge-text: #1e40af;
+  --icon-filter: none;
 }
 
 [data-theme="dark"] {
@@ -32,6 +35,9 @@
   --error-bg: rgba(127, 29, 29, 0.2);
   --error-border: #991b1b;
   --error-text: #fca5a5;
+  --badge-bg: #1e3a8a;
+  --badge-text: #bfdbfe;
+  --icon-filter: invert(1);
 }
 
 @theme inline {
@@ -59,6 +65,9 @@
     --error-bg: rgba(127, 29, 29, 0.2);
     --error-border: #991b1b;
     --error-text: #fca5a5;
+    --badge-bg: #1e3a8a;
+    --badge-text: #bfdbfe;
+    --icon-filter: invert(1);
   }
 }
 

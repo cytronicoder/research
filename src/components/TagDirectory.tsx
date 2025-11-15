@@ -19,7 +19,7 @@ export default function TagDirectory({ allTags, selectedTag, onTagSelect }: TagD
                     className="px-3 py-1 text-sm rounded-full transition-colors"
                     style={{
                         backgroundColor: selectedTag === null ? 'var(--primary-color)' : 'var(--foreground)',
-                        color: selectedTag === null ? 'white' : 'var(--background-color)'
+                        color: selectedTag === null ? 'white' : 'var(--primary-color)'
                     }}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -33,7 +33,7 @@ export default function TagDirectory({ allTags, selectedTag, onTagSelect }: TagD
                         className="px-3 py-1 text-sm rounded-full transition-colors"
                         style={{
                             backgroundColor: selectedTag === tag ? 'var(--primary-color)' : 'var(--foreground)',
-                            color: selectedTag === tag ? 'white' : 'var(--background-color)'
+                            color: selectedTag === tag ? 'white' : 'var(--primary-color)'
                         }}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
