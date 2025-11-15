@@ -147,18 +147,32 @@ export default function SearchableProjects({ initialLinks }: SearchableProjectsP
                 <div className="mb-4 flex justify-center">
                     <div className="flex space-x-1 rounded-lg bg-gray-200 dark:bg-gray-800 p-1">
                         <button onClick={() => setSourceFilter('all')} className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${sourceFilter === 'all' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>All</button>
-                        <button onClick={() => setSourceFilter('manual')} className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${sourceFilter === 'manual' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>Manual</button>
-                        <button onClick={() => setSourceFilter('orcid')} className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${sourceFilter === 'orcid' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>ORCID</button>
+                        <button onClick={() => setSourceFilter('manual')} className={`px-3 py-1 text-sm font-medium rounded-md transition-colors`} style={{
+                            backgroundColor: sourceFilter === 'manual' ? 'var(--primary-color)' : 'transparent',
+                            color: sourceFilter === 'manual' ? 'white' : 'var(--text-color)',
+                            opacity: sourceFilter === 'manual' ? 1 : 0.7
+                        }}>Manual</button>
+                        <button onClick={() => setSourceFilter('orcid')} className={`px-3 py-1 text-sm font-medium rounded-md transition-colors`} style={{
+                            backgroundColor: sourceFilter === 'orcid' ? 'var(--primary-color)' : 'transparent',
+                            color: sourceFilter === 'orcid' ? 'white' : 'var(--text-color)',
+                            opacity: sourceFilter === 'orcid' ? 1 : 0.7
+                        }}>ORCID</button>
                     </div>
                 </div>
             )}
             <div className="mb-4 flex justify-center">
                 <div className="flex items-center space-x-4">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Sort by:</span>
+                    <span className="text-sm font-medium" style={{ color: 'var(--text-color)' }}>Sort by:</span>
                     <select
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value as "alphabetical-asc" | "alphabetical-desc" | "newest" | "oldest")}
-                        className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="px-3 py-1 text-sm border rounded-md focus:outline-none focus:ring-2"
+                        style={{
+                            backgroundColor: 'var(--input-bg)',
+                            borderColor: 'var(--input-border)',
+                            color: 'var(--text-color)',
+                            '--tw-ring-color': 'var(--primary-color)'
+                        } as React.CSSProperties}
                     >
                         <option value="alphabetical-asc">Alphabetical (A-Z)</option>
                         <option value="alphabetical-desc">Alphabetical (Z-A)</option>

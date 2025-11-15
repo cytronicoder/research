@@ -19,7 +19,7 @@ function highlightText(text: string, highlights: string[] = []): React.JSX.Eleme
     let highlightedText = text;
     highlights.forEach(highlight => {
         const regex = new RegExp(`(${highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-        highlightedText = highlightedText.replace(regex, '<mark class="bg-yellow-200 dark:bg-yellow-800">$1</mark>');
+        highlightedText = highlightedText.replace(regex, '<mark style="background-color: rgba(106, 142, 127, 0.3);">$1</mark>');
     });
 
     return <span dangerouslySetInnerHTML={{ __html: highlightedText }} />;
@@ -43,7 +43,10 @@ export default function ProjectCard({
             .join(" ");
 
     return (
-        <div className="group block bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-lg transition-all duration-200">
+        <div className="group block border rounded-lg p-6 hover:shadow-lg transition-all duration-200" style={{
+            backgroundColor: 'var(--card-bg)',
+            borderColor: 'var(--card-border)'
+        }}>
             <div className="flex items-start justify-between gap-4">
                 <a
                     href={target}
@@ -55,12 +58,12 @@ export default function ProjectCard({
                         {source === 'orcid' && (
                             <Image src="/orcid.svg" alt="ORCID" width={20} height={20} className="dark:invert" />
                         )}
-                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        <h2 className="text-xl font-semibold transition-colors" style={{ color: 'var(--text-color)' }}>
                             {highlightText(displayTitle, highlights)}
                         </h2>
                     </div>
                     {description && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+                        <p className="text-sm mb-3 line-clamp-2" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
                             {highlightText(description, highlights)}
                         </p>
                     )}
@@ -69,21 +72,27 @@ export default function ProjectCard({
                             {tags.map((tag) => (
                                 <span
                                     key={tag}
-                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${highlights.some(h => tag.toLowerCase().includes(h.toLowerCase()))
-                                            ? 'bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200'
-                                            : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
-                                        }`}
+                                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                    style={{
+                                        backgroundColor: highlights.some(h => tag.toLowerCase().includes(h.toLowerCase()))
+                                            ? 'rgba(106, 142, 127, 0.3)'
+                                            : 'var(--primary-color)',
+                                        color: highlights.some(h => tag.toLowerCase().includes(h.toLowerCase()))
+                                            ? 'var(--text-color)'
+                                            : 'white',
+                                        opacity: highlights.some(h => tag.toLowerCase().includes(h.toLowerCase())) ? 1 : 0.8
+                                    }}
                                 >
                                     {tag}
                                 </span>
                             ))}
                         </div>
                     )}
-                    <p className="text-xs text-gray-500 dark:text-gray-500 truncate font-mono">
+                    <p className="text-xs truncate font-mono" style={{ color: 'var(--text-color)', opacity: 0.5 }}>
                         {target}
                     </p>
                 </a>
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                     <ShareButton title={displayTitle} shortUrl={shortUrl} />
                 </div>
             </div>

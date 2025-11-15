@@ -16,7 +16,8 @@ export default function SearchBar({
             <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <svg
-                        className="h-5 w-5 text-gray-400"
+                        className="h-5 w-5"
+                        style={{ color: 'var(--text-color)', opacity: 0.5 }}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -34,12 +35,19 @@ export default function SearchBar({
                     placeholder="Search my research projects..."
                     value={searchQuery}
                     onChange={(e) => onSearchChange(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 text-lg border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full pl-12 pr-4 py-4 text-lg border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-all"
+                    style={{
+                        backgroundColor: 'var(--input-bg)',
+                        borderColor: 'var(--input-border)',
+                        color: 'var(--text-color)',
+                        '--tw-ring-color': 'var(--primary-color)'
+                    } as React.CSSProperties}
                 />
                 {searchQuery && (
                     <button
                         onClick={() => onSearchChange("")}
-                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                        className="absolute inset-y-0 right-0 pr-4 flex items-center"
+                        style={{ color: 'var(--text-color)', opacity: 0.5 }}
                         aria-label="Clear search"
                     >
                         <svg
@@ -59,7 +67,7 @@ export default function SearchBar({
                 )}
             </div>
             {searchQuery && resultsCount !== undefined && (
-                <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+                <p className="mt-3 text-sm" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
                     {resultsCount} result{resultsCount === 1 ? "" : "s"} found
                 </p>
             )}

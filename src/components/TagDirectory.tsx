@@ -16,10 +16,11 @@ export default function TagDirectory({ allTags, selectedTag, onTagSelect }: TagD
             <div className="flex flex-wrap gap-2">
                 <motion.button
                     onClick={() => onTagSelect(null)}
-                    className={`px-3 py-1 text-sm rounded-full transition-colors ${selectedTag === null
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                        }`}
+                    className="px-3 py-1 text-sm rounded-full transition-colors"
+                    style={{
+                        backgroundColor: selectedTag === null ? 'var(--primary-color)' : 'var(--foreground)',
+                        color: selectedTag === null ? 'white' : 'var(--text-color)'
+                    }}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                 >
@@ -29,10 +30,11 @@ export default function TagDirectory({ allTags, selectedTag, onTagSelect }: TagD
                     <motion.button
                         key={tag}
                         onClick={() => onTagSelect(selectedTag === tag ? null : tag)}
-                        className={`px-3 py-1 text-sm rounded-full transition-colors ${selectedTag === tag
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                            }`}
+                        className="px-3 py-1 text-sm rounded-full transition-colors"
+                        style={{
+                            backgroundColor: selectedTag === tag ? 'var(--primary-color)' : 'var(--foreground)',
+                            color: selectedTag === tag ? 'white' : 'var(--text-color)'
+                        }}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         initial={{ opacity: 0, y: 10 }}

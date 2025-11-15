@@ -58,7 +58,7 @@ export default function ShareButton({ title, shortUrl }: ShareButtonProps) {
                         initial={{ opacity: 0, scale: 0.8, y: -10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.8, y: -10 }}
-                        className="absolute right-0 top-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-2 z-10 min-w-[160px]"
+                        className="absolute right-0 top-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-2 z-10 min-w-40"
                     >
                         <motion.button
                             onClick={copyToClipboard}
