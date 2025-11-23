@@ -11,7 +11,6 @@ export default function ProjectFooter({
         <footer className="mt-20 pt-8 border-t text-center" style={{ borderColor: 'var(--card-border)' }}>
             <p className="text-sm" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
                 {totalProjects > 0 &&
-                    !isSearching &&
                     `${totalProjects} project${totalProjects === 1 ? "" : "s"} available!`}{" "}
                 Visit my{" "}
                 <a
