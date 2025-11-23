@@ -19,8 +19,12 @@ interface ProjectListProps {
 export default function ProjectList({ links, isSearching, highlights }: ProjectListProps) {
     if (links.length === 0) {
         return (
-            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-16 text-center">
-                <p className="text-gray-600 dark:text-gray-400 text-lg">
+            <div className="rounded-lg p-16 text-center" style={{
+                backgroundColor: 'var(--card-bg)',
+                borderColor: 'var(--card-border)',
+                border: '1px solid'
+            }}>
+                <p className="text-lg" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
                     {isSearching
                         ? "No projects found matching your search."
                         : "No projects available at this time."}

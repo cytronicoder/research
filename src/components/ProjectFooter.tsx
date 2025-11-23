@@ -8,29 +8,30 @@ export default function ProjectFooter({
     isSearching,
 }: ProjectFooterProps) {
     return (
-        <footer className="mt-20 pt-8 border-t border-gray-200 dark:border-gray-800 text-center">
-            <p className="text-sm text-gray-500 dark:text-gray-500">
+        <footer className="mt-20 pt-8 border-t text-center" style={{ borderColor: 'var(--card-border)' }}>
+            <p className="text-sm" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
                 {totalProjects > 0 &&
-                    !isSearching &&
                     `${totalProjects} project${totalProjects === 1 ? "" : "s"} available!`}{" "}
                 Visit my{" "}
                 <a
                     href="https://cytronicoder.com/resume"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                    className="hover:underline"
+                    style={{ color: 'var(--primary-color)' }}
                 >
                     resume
                 </a>{" "}
                 to see all my work.
             </p>
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-500">
+            <p className="mt-2 text-sm" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
                 Check out my{" "}
                 <a
                     href="https://github.com/cytronicoder"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                    className="hover:underline"
+                    style={{ color: 'var(--primary-color)' }}
                 >
                     GitHub
                 </a>{" "}
@@ -39,7 +40,8 @@ export default function ProjectFooter({
                     href="https://cytronicoder.com"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                    className="hover:underline"
+                    style={{ color: 'var(--primary-color)' }}
                 >
                     portfolio
                 </a>{" "}

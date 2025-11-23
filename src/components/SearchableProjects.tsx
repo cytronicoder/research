@@ -47,61 +47,30 @@ export default function SearchableProjects({ initialLinks }: SearchableProjectsP
 
             setIsSearching(true);
             try {
-                const params = new URLSearchParams();
-                if (searchQuery) params.append('q', searchQuery);
-                if (sourceFilter !== 'all') params.append('source', sourceFilter);
-                if (selectedTag) params.append('tags', selectedTag);
+                let filtered = initialLinks;
 
-                const response = await fetch(`/api/search?${params.toString()}`);
-                if (response.ok) {
-                    const result: SearchResult = await response.json();
-                    setFilteredLinks(result.links);
-                    setHighlights(result.highlights || {});
-                } else {
-                    const searchFilteredLinks = initialLinks.filter(
+                if (searchQuery) {
+                    filtered = filtered.filter(
                         (link) =>
                             link.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             link.target.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             (link.title && link.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
                             (link.description && link.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                            link.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+                            (link.tags && link.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase())))
                     );
-
-                    const sourceFilteredLinks = searchFilteredLinks.filter(link => {
-                        if (sourceFilter === 'all') return true;
-                        return link.source === sourceFilter;
-                    });
-
-                    const tagFilteredLinks = sourceFilteredLinks.filter(link => {
-                        if (!selectedTag) return true;
-                        return link.tags.some(tag => tag.toLowerCase() === selectedTag.toLowerCase());
-                    });
-
-                    setFilteredLinks(tagFilteredLinks);
-                    setHighlights({});
                 }
-            } catch (error) {
-                console.error('Search failed:', error);
-                const searchFilteredLinks = initialLinks.filter(
-                    (link) =>
-                        link.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        link.target.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        (link.title && link.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                        (link.description && link.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                        link.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-                );
 
-                const sourceFilteredLinks = searchFilteredLinks.filter(link => {
-                    if (sourceFilter === 'all') return true;
-                    return link.source === sourceFilter;
-                });
+                if (sourceFilter !== 'all') {
+                    filtered = filtered.filter(link => link.source === sourceFilter);
+                }
 
-                const tagFilteredLinks = sourceFilteredLinks.filter(link => {
-                    if (!selectedTag) return true;
-                    return link.tags.some(tag => tag.toLowerCase() === selectedTag.toLowerCase());
-                });
+                if (selectedTag) {
+                    filtered = filtered.filter(link =>
+                        link.tags && link.tags.some(tag => tag.toLowerCase() === selectedTag.toLowerCase())
+                    );
+                }
 
-                setFilteredLinks(tagFilteredLinks);
+                setFilteredLinks(filtered);
                 setHighlights({});
             } finally {
                 setIsSearching(false);
@@ -112,7 +81,7 @@ export default function SearchableProjects({ initialLinks }: SearchableProjectsP
         return () => clearTimeout(debounceTimer);
     }, [searchQuery, sourceFilter, selectedTag, initialLinks]);
 
-    const sortedLinks = [...filteredLinks].sort((a, b) => {
+    const sortedLinks = [...(filteredLinks || [])].sort((a, b) => {
         switch (sortBy) {
             case "alphabetical-asc":
                 const titleA = a.title || a.slug;
@@ -139,26 +108,50 @@ export default function SearchableProjects({ initialLinks }: SearchableProjectsP
 
     const hasOrcid = initialLinks.some(link => link.source === 'orcid');
     const hasManual = initialLinks.some(link => link.source === 'manual');
-    const allTags = initialLinks.flatMap(link => link.tags);
+    const allTags = initialLinks.flatMap(link => link.tags || []);
 
     return (
         <>
             {hasOrcid && hasManual && (
                 <div className="mb-4 flex justify-center">
-                    <div className="flex space-x-1 rounded-lg bg-gray-200 dark:bg-gray-800 p-1">
-                        <button onClick={() => setSourceFilter('all')} className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${sourceFilter === 'all' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>All</button>
-                        <button onClick={() => setSourceFilter('manual')} className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${sourceFilter === 'manual' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>Manual</button>
-                        <button onClick={() => setSourceFilter('orcid')} className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${sourceFilter === 'orcid' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>ORCID</button>
+                    <div className="flex space-x-1 rounded-lg p-1" style={{
+                        backgroundColor: 'var(--card-bg)',
+                        borderColor: 'var(--card-border)',
+                        border: '1px solid'
+                    }}>
+                        <button onClick={() => setSourceFilter('all')} className={`px-3 py-1 text-sm font-medium rounded-md transition-colors`} style={{
+                            backgroundColor: sourceFilter === 'all' ? 'var(--primary-color)' : 'transparent',
+                            color: sourceFilter === 'all' ? 'white' : 'var(--text-color)',
+                            opacity: sourceFilter === 'all' ? 1 : 0.7
+                        }}>
+                            All
+                        </button>
+                        <button onClick={() => setSourceFilter('manual')} className={`px-3 py-1 text-sm font-medium rounded-md transition-colors`} style={{
+                            backgroundColor: sourceFilter === 'manual' ? 'var(--primary-color)' : 'transparent',
+                            color: sourceFilter === 'manual' ? 'white' : 'var(--text-color)',
+                            opacity: sourceFilter === 'manual' ? 1 : 0.7
+                        }}>Manual</button>
+                        <button onClick={() => setSourceFilter('orcid')} className={`px-3 py-1 text-sm font-medium rounded-md transition-colors`} style={{
+                            backgroundColor: sourceFilter === 'orcid' ? 'var(--primary-color)' : 'transparent',
+                            color: sourceFilter === 'orcid' ? 'white' : 'var(--text-color)',
+                            opacity: sourceFilter === 'orcid' ? 1 : 0.7
+                        }}>ORCID</button>
                     </div>
                 </div>
             )}
             <div className="mb-4 flex justify-center">
                 <div className="flex items-center space-x-4">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Sort by:</span>
+                    <span className="text-sm font-medium" style={{ color: 'var(--text-color)' }}>Sort by:</span>
                     <select
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value as "alphabetical-asc" | "alphabetical-desc" | "newest" | "oldest")}
-                        className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="px-3 py-1 text-sm border rounded-md focus:outline-none focus:ring-2"
+                        style={{
+                            backgroundColor: 'var(--input-bg)',
+                            borderColor: 'var(--input-border)',
+                            color: 'var(--text-color)',
+                            '--tw-ring-color': 'var(--primary-color)'
+                        } as React.CSSProperties}
                     >
                         <option value="alphabetical-asc">Alphabetical (A-Z)</option>
                         <option value="alphabetical-desc">Alphabetical (Z-A)</option>
@@ -170,7 +163,7 @@ export default function SearchableProjects({ initialLinks }: SearchableProjectsP
             <SearchBar
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
-                resultsCount={searchQuery || sourceFilter !== 'all' || selectedTag ? filteredLinks.length : undefined}
+                resultsCount={searchQuery || sourceFilter !== 'all' || selectedTag ? (filteredLinks?.length ?? 0) : undefined}
             />
 
             <TagDirectory

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import ThemeToggle from "@/components/ThemeToggle";
 
 interface ApiLinkItem {
     slug: string;
@@ -387,14 +388,14 @@ export default function AdminDashboard() {
 
     if (!isAuthenticated) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center px-4">
+            <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--background)' }}>
                 <div className="max-w-md w-full">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-8">
+                    <div className="rounded-lg shadow-2xl p-8" style={{ backgroundColor: 'var(--card-bg)' }}>
                         <div className="text-center mb-8">
-                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                            <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-color)' }}>
                                 Admin Dashboard
                             </h1>
-                            <p className="text-gray-600 dark:text-gray-400">
+                            <p style={{ color: 'var(--text-color)', opacity: 0.7 }}>
                                 Enter your admin key to continue
                             </p>
                         </div>
@@ -403,7 +404,8 @@ export default function AdminDashboard() {
                             <div>
                                 <label
                                     htmlFor="password"
-                                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                                    className="block text-sm font-medium mb-2"
+                                    style={{ color: 'var(--text-color)' }}
                                 >
                                     Admin Key
                                 </label>
@@ -412,15 +414,24 @@ export default function AdminDashboard() {
                                     id="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:border-transparent"
+                                    style={{
+                                        backgroundColor: 'var(--input-bg)',
+                                        borderColor: 'var(--input-border)',
+                                        color: 'var(--text-color)',
+                                        '--tw-ring-color': 'var(--primary-color)'
+                                    } as React.CSSProperties}
                                     placeholder="Enter admin key"
                                     required
                                 />
                             </div>
 
                             {authError && (
-                                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-                                    <p className="text-sm text-red-600 dark:text-red-400">
+                                <div className="rounded-lg p-3 border" style={{
+                                    backgroundColor: 'var(--error-bg)',
+                                    borderColor: 'var(--error-border)'
+                                }}>
+                                    <p className="text-sm" style={{ color: 'var(--error-text)' }}>
                                         {authError}
                                     </p>
                                 </div>
@@ -428,7 +439,13 @@ export default function AdminDashboard() {
 
                             <button
                                 type="submit"
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                className="w-full text-white font-medium py-3 px-4 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
+                                style={{
+                                    backgroundColor: 'var(--button-primary)',
+                                    '--tw-ring-color': 'var(--primary-color)'
+                                } as React.CSSProperties}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--button-primary-hover)'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--button-primary)'}
                             >
                                 Sign In
                             </button>
@@ -437,7 +454,8 @@ export default function AdminDashboard() {
                         <div className="mt-6 text-center">
                             <Link
                                 href="/"
-                                className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                                className="text-sm transition-colors"
+                                style={{ color: 'var(--text-color)', opacity: 0.7 }}
                             >
                                 ← Back to home
                             </Link>
@@ -449,20 +467,28 @@ export default function AdminDashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="min-h-screen" style={{ backgroundColor: 'var(--background-color)' }}>
             <div className="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
                 <header className="flex justify-between items-center mb-12">
                     <div>
-                        <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-2">
+                        <h1 className="text-4xl sm:text-5xl font-bold mb-2" style={{ color: 'var(--text-color)' }}>
                             Admin Dashboard
                         </h1>
                     </div>
-                    <button
-                        onClick={handleLogout}
-                        className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    <div className="flex items-center gap-3">
+                        <ThemeToggle />
+                        <button
+                            onClick={handleLogout}
+                            className="px-4 py-2 text-sm font-medium border rounded-lg transition-colors"
+                            style={{
+                            color: 'var(--text-color)',
+                            backgroundColor: 'var(--card-bg)',
+                            borderColor: 'var(--card-border)'
+                        }}
                     >
                         Logout
                     </button>
+                    </div>
                 </header>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">

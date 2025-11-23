@@ -6,14 +6,37 @@ This document covers the API endpoints available for managing research projects,
 
 All API endpoints require authentication using the `ADMIN_KEY` environment variable. Include this in the `x-admin-key` header for all requests.
 
+## Authentication API
+
+### Check Authentication Status
+
+Verify if your admin key is valid:
+
+```bash
+curl "https://your-site.com/api/auth" \
+  -H "x-admin-key: your-admin-key"
+```
+
+**Response:**
+
+```json
+{
+  "authenticated": true
+}
+```
+
+Returns `401 Unauthorized` if the key is invalid.
+
 ## Research Projects API
 
 ### Adding/Updating Research Projects
 
-To upload or update research projects, use the `/api/links` endpoint with a PUT request:
+To upload a new research project, use the `/api/links` endpoint with a POST request. You can add either a single project or multiple projects at once.
+
+#### Single Project
 
 ```bash
-curl -X PUT https://your-site.com/api/links \
+curl -X POST https://your-site.com/api/links \
   -H "Content-Type: application/json" \
   -H "x-admin-key: your-admin-key" \
   -d '{
@@ -25,19 +48,7 @@ curl -X PUT https://your-site.com/api/links \
   }'
 ```
 
-**Parameters:**
-
-- `slug`: Unique identifier for the project
-- `target`: URL to the research project
-- `title`: Project title
-- `description`: Brief description
-- `tags`: Array of tag strings
-
-### Bulk Operations
-
-#### Adding Multiple Projects
-
-To add multiple projects at once:
+#### Multiple Projects
 
 ```bash
 curl -X POST https://your-site.com/api/links \
@@ -63,11 +74,51 @@ curl -X POST https://your-site.com/api/links \
   }'
 ```
 
+To update research projects, use the `/api/links` endpoint with a PUT request. You can update a single project or multiple projects.
+
+#### Single Project Update
+
+```bash
+curl -X PUT https://your-site.com/api/links \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "slug": "project-name",
+    "description": "New description of the research"
+  }'
+```
+
+#### Multiple Projects Update
+
+```bash
+curl -X PUT https://your-site.com/api/links \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "links": [
+      { "slug": "project-1", "description": "Updated desc 1" },
+      { "slug": "project-2", "description": "Updated desc 2" }
+    ]
+  }'
+```
+
+**Parameters:**
+
+- `slug`: Unique identifier for the project (required for updates)
+- `target`: URL to the research project (required for new projects)
+- `title`: Project title
+- `description`: Brief description
+- `tags`: Array of tag strings
+- `permanent`: Boolean flag for permanent links (optional)
+
+### Bulk Operations
+
 #### Bulk Updates
 
 To update multiple projects at once:
 
 ```bash
+# Update specific projects
 curl -X PATCH https://your-site.com/api/links \
   -H "Content-Type: application/json" \
   -H "x-admin-key: your-admin-key" \
@@ -76,6 +127,17 @@ curl -X PATCH https://your-site.com/api/links \
     "updates": {
       "tags": ["updated-tag"],
       "description": "Updated description for all"
+    }
+  }'
+
+# Update all projects with a specific tag
+curl -X PATCH https://your-site.com/api/links \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "tag": "old-tag",
+    "updates": {
+      "permanent": true
     }
   }'
 ```
@@ -115,6 +177,14 @@ curl "https://your-site.com/api/links?limit=10&offset=20" \
   -H "x-admin-key: your-admin-key"
 ```
 
+**Query Parameters:**
+
+- `tag`: Filter by specific tag
+- `source`: Filter by source (`manual` or `orcid`)
+- `search`: Search in title, description, and tags
+- `limit`: Maximum number of results (default: 100, max: 200)
+- `offset`: Pagination offset (default: 0)
+
 #### Get Specific Project
 
 ```bash
@@ -124,10 +194,62 @@ curl "https://your-site.com/api/links?slug=project-name" \
 
 ### Deleting Projects
 
+You can delete projects by slug, multiple slugs, or by tag.
+
 ```bash
+# Delete single project
 curl -X DELETE "https://your-site.com/api/links?slug=project-name" \
   -H "x-admin-key: your-admin-key"
+
+# Delete multiple projects
+curl -X DELETE "https://your-site.com/api/links?slugs=project-1,project-2" \
+  -H "x-admin-key: your-admin-key"
+
+# Delete by tag (deletes all projects with this tag)
+curl -X DELETE "https://your-site.com/api/links?tag=old-tag" \
+  -H "x-admin-key: your-admin-key"
 ```
+
+You can also use the request body for deletion:
+
+```bash
+curl -X DELETE https://your-site.com/api/links \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "slugs": ["project-1", "project-2"],
+    "tag": "deprecated"
+  }'
+```
+
+## Directory API
+
+### Get All Projects (Public)
+
+Get a public directory of all projects without requiring authentication:
+
+```bash
+curl "https://your-site.com/api/directory"
+```
+
+**Response:**
+
+```json
+[
+  {
+    "slug": "project-name",
+    "target": "https://example.com/project",
+    "clicks": 42,
+    "shortUrl": "/project-name",
+    "title": "Project Title",
+    "description": "Project description",
+    "tags": ["tag1", "tag2"],
+    "createdAt": "2025-01-01T00:00:00.000Z"
+  }
+]
+```
+
+This endpoint returns all projects sorted by creation date (newest first).
 
 ## ORCID Integration
 
@@ -154,7 +276,27 @@ The slug for ORCID entries follows the pattern `orcid-{put-code}`, where `put-co
 
 ## Tag Management
 
-You can manage tags across entries using the tags API endpoint. This includes renaming tags, removing tags, and bulk operations for adding/removing tags from multiple entries.
+### Get Tag Statistics
+
+Get comprehensive statistics about tags:
+
+```bash
+curl "https://your-site.com/api/tags?action=stats" \
+  -H "x-admin-key: your-admin-key"
+```
+
+Returns tag counts, source distribution, and top tags.
+
+### Get Tag Suggestions
+
+Get tag suggestions based on partial input:
+
+```bash
+curl "https://your-site.com/api/tags?action=suggest&prefix=mach" \
+  -H "x-admin-key: your-admin-key"
+```
+
+Returns up to 10 tag suggestions that start with the given prefix.
 
 ### Renaming Tags
 
@@ -219,28 +361,6 @@ curl -X DELETE https://your-site.com/api/tags \
 
 This will remove the specified tag from all entries that contain it.
 
-### Tag Statistics
-
-Get comprehensive statistics about tags:
-
-```bash
-curl "https://your-site.com/api/tags?action=stats" \
-  -H "x-admin-key: your-admin-key"
-```
-
-Returns tag counts, source distribution, and top tags.
-
-### Tag Suggestions
-
-Get tag suggestions based on partial input:
-
-```bash
-curl "https://your-site.com/api/tags?action=suggest&prefix=mach" \
-  -H "x-admin-key: your-admin-key"
-```
-
-Returns up to 10 tag suggestions that start with the given prefix.
-
 ## Analytics API
 
 Get comprehensive analytics about your research site:
@@ -277,6 +397,14 @@ curl "https://your-site.com/api/search?q=research&limit=5&offset=10" \
   -H "x-admin-key: your-admin-key"
 ```
 
+**Query Parameters:**
+
+- `q`: Search query (required if no other filters)
+- `tag`: Filter by specific tag
+- `source`: Filter by source (`manual` or `orcid`)
+- `limit`: Maximum results (default: 20, max: 100)
+- `offset`: Pagination offset (default: 0)
+
 Returns ranked results with relevance scores and highlights.
 
 ## Export API
@@ -298,6 +426,7 @@ curl "https://your-site.com/api/export?source=orcid" \
 ```
 
 **Formats:** `json`, `csv`
+**Source filters:** `manual`, `orcid`
 
 ## Admin Panel
 

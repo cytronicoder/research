@@ -62,7 +62,7 @@ export default async function Home() {
   const allLinks = [...manualLinks, ...orcidWorks];
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background-color)' }}>
       <div className="max-w-4xl w-full mx-auto px-4 py-16 sm:px-6 lg:px-8">
         <SearchableProjects initialLinks={allLinks} />
       </div>
