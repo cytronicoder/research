@@ -25,7 +25,7 @@ export default function ThemeToggle() {
     if (!mounted) {
         return (
             <button
-                className="p-2 rounded-lg transition-colors"
+                className="p-2 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
                 style={{
                     backgroundColor: 'var(--card-bg)',
                     borderColor: 'var(--card-border)',
@@ -54,7 +54,7 @@ export default function ThemeToggle() {
     return (
         <button
             onClick={toggleTheme}
-            className="p-2 rounded-lg transition-colors"
+            className="p-2 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
             style={{
                 backgroundColor: 'var(--card-bg)',
                 borderColor: 'var(--card-border)',

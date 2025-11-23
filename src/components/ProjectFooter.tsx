@@ -17,7 +17,7 @@ export default function ProjectFooter({
                     href="https://cytronicoder.com/resume"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="hover:underline"
+                    className="hover:underline transition-opacity hover:opacity-80"
                     style={{ color: 'var(--primary-color)' }}
                 >
                     resume
@@ -30,7 +30,7 @@ export default function ProjectFooter({
                     href="https://github.com/cytronicoder"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="hover:underline"
+                    className="hover:underline transition-opacity hover:opacity-80"
                     style={{ color: 'var(--primary-color)' }}
                 >
                     GitHub
@@ -40,7 +40,7 @@ export default function ProjectFooter({
                     href="https://cytronicoder.com"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="hover:underline"
+                    className="hover:underline transition-opacity hover:opacity-80"
                     style={{ color: 'var(--primary-color)' }}
                 >
                     portfolio

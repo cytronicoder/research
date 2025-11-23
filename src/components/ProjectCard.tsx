@@ -43,7 +43,7 @@ export default function ProjectCard({
             .join(" ");
 
     return (
-        <div className="group block border rounded-lg p-6 hover:shadow-lg transition-all duration-200" style={{
+        <div className="group block border rounded-lg p-6 hover:shadow-lg hover:-translate-y-1 transition-all duration-200" style={{
             backgroundColor: 'var(--card-bg)',
             borderColor: 'var(--card-border)'
         }}>
