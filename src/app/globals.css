@@ -18,6 +18,7 @@
   --badge-bg: #dbeafe;
   --badge-text: #1e40af;
   --icon-filter: none;
+  --hover-bg: rgba(0, 0, 0, 0.05);
 }
 
 [data-theme="dark"] {
@@ -38,6 +39,7 @@
   --badge-bg: #1e3a8a;
   --badge-text: #bfdbfe;
   --icon-filter: invert(1);
+  --hover-bg: rgba(255, 255, 255, 0.05);
 }
 
 @theme inline {
