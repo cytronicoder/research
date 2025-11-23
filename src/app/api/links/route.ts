@@ -76,18 +76,25 @@ export async function POST(req: NextRequest) {
     return unauthorized();
 
   try {
-    const { links } = await req.json();
-    if (!links || !Array.isArray(links))
+    const body = await req.json();
+    let linksToProcess: any[];
+
+    if (body.links && Array.isArray(body.links)) {
+      linksToProcess = body.links;
+    } else if (body.slug && body.target) {
+      linksToProcess = [body];
+    } else {
       return NextResponse.json(
-        { error: "links array required" },
+        { error: "links array or single link object required" },
         { status: 400 }
       );
+    }
 
     const redis = await getRedisClient();
     const results = [];
     const origin = new URL(req.url).origin;
 
-    for (const link of links) {
+    for (const link of linksToProcess) {
       const { slug, target, permanent, title, description, tags } = link;
       if (!slug || !target) {
         results.push({ slug, error: "slug and target required" });
@@ -158,62 +165,95 @@ export async function PUT(req: NextRequest) {
     return unauthorized();
 
   try {
-    const { slug, target, permanent, title, description, tags } =
-      await req.json();
-    if (!slug)
-      return NextResponse.json({ error: "slug required" }, { status: 400 });
+    const body = await req.json();
+    let linksToProcess: any[] = [];
+
+    if (Array.isArray(body)) {
+      linksToProcess = body;
+    } else if (body.links && Array.isArray(body.links)) {
+      linksToProcess = body.links;
+    } else if (body.slug) {
+      linksToProcess = [body];
+    } else {
+      return NextResponse.json(
+        { error: "slug or links array required" },
+        { status: 400 }
+      );
+    }
 
     const redis = await getRedisClient();
-    const key = slug.toLowerCase().replace(/^\//, "");
-
-    if (!isValidSlug(key))
-      return NextResponse.json(
-        {
-          error:
-            "invalid slug format (use only letters, numbers, hyphens, underscores)",
-        },
-        { status: 400 }
-      );
-
-    if (target && !/^https?:\/\//i.test(target))
-      return NextResponse.json(
-        { error: "target must start with http(s)://" },
-        { status: 400 }
-      );
-
-    const exists = await redis.exists(`link:${key}`);
-    if (!exists) {
-      return NextResponse.json({ error: "link not found" }, { status: 404 });
-    }
-
-    const existingMeta = await redis.hGetAll(`meta:${key}`);
-    const multi = redis.multi();
-
-    if (target) {
-      multi.set(`link:${key}`, target);
-    }
-
-    const metadata = prepareMetadata(
-      { permanent, title, description, tags },
-      true
-    );
-
-    if (existingMeta.createdAt) {
-      metadata.createdAt = existingMeta.createdAt;
-    }
-
-    multi.hSet(`meta:${key}`, metadata);
-    await multi.exec();
-
-    const finalTarget = target || (await redis.get(`link:${key}`));
+    const results = [];
     const origin = new URL(req.url).origin;
 
-    return NextResponse.json({
-      slug: key,
-      short: `${origin}/${key}`,
-      target: finalTarget,
-      ...parseMetadata(metadata),
-    });
+    for (const linkData of linksToProcess) {
+      const { slug, target, permanent, title, description, tags } = linkData;
+
+      if (!slug) {
+        results.push({ error: "slug required" });
+        continue;
+      }
+
+      const key = slug.toLowerCase().replace(/^\//, "");
+
+      if (!isValidSlug(key)) {
+        results.push({
+          slug,
+          error:
+            "invalid slug format (use only letters, numbers, hyphens, underscores)",
+        });
+        continue;
+      }
+
+      if (target && !/^https?:\/\//i.test(target)) {
+        results.push({ slug, error: "target must start with http(s)://" });
+        continue;
+      }
+
+      const exists = await redis.exists(`link:${key}`);
+      if (!exists) {
+        results.push({ slug: key, error: "link not found" });
+        continue;
+      }
+
+      const existingMeta = await redis.hGetAll(`meta:${key}`);
+      const multi = redis.multi();
+
+      if (target) {
+        multi.set(`link:${key}`, target);
+      }
+
+      const metadata = prepareMetadata(
+        { permanent, title, description, tags },
+        true
+      );
+
+      if (existingMeta.createdAt) {
+        metadata.createdAt = existingMeta.createdAt;
+      }
+
+      multi.hSet(`meta:${key}`, metadata);
+      await multi.exec();
+
+      const finalTarget = target || (await redis.get(`link:${key}`));
+
+      results.push({
+        slug: key,
+        short: `${origin}/${key}`,
+        target: finalTarget,
+        ...parseMetadata(metadata),
+      });
+    }
+
+    if (
+      linksToProcess.length === 1 &&
+      body.slug &&
+      !body.links &&
+      !Array.isArray(body)
+    ) {
+      return NextResponse.json(results[0]);
+    }
+
+    return NextResponse.json({ results });
   } catch (error) {
     console.error("Error updating link:", error);
     return NextResponse.json(
@@ -352,17 +392,57 @@ export async function PATCH(req: NextRequest) {
     return unauthorized();
 
   try {
-    const { slugs, updates } = await req.json();
-    if (!slugs || !Array.isArray(slugs) || !updates)
+    const body = await req.json();
+    const { updates } = body;
+
+    if (!updates) {
       return NextResponse.json(
-        { error: "slugs array and updates object required" },
+        { error: "updates object required" },
         { status: 400 }
       );
+    }
 
     const redis = await getRedisClient();
+    let slugsToUpdate: string[] = [];
+
+    if (body.slug) slugsToUpdate.push(body.slug);
+    if (body.slugs && Array.isArray(body.slugs))
+      slugsToUpdate.push(...body.slugs);
+
+    if (body.tag) {
+      const keys = await redis.keys("link:*");
+      const pipeline = redis.multi();
+      for (const key of keys) {
+        const s = key.replace("link:", "");
+        pipeline.hGetAll(`meta:${s}`);
+      }
+      const metas = await pipeline.exec();
+
+      if (metas) {
+        keys.forEach((key, index) => {
+          const meta = metas[index] as unknown as Record<string, string>;
+          const tags = meta.tags
+            ? meta.tags.split(",").map((t) => t.trim())
+            : [];
+          if (tags.includes(body.tag)) {
+            slugsToUpdate.push(key.replace("link:", ""));
+          }
+        });
+      }
+    }
+
+    slugsToUpdate = Array.from(new Set(slugsToUpdate));
+
+    if (slugsToUpdate.length === 0) {
+      return NextResponse.json(
+        { error: "slug, slugs, or tag required (or no matching links found)" },
+        { status: 400 }
+      );
+    }
+
     const results = [];
 
-    for (const slug of slugs) {
+    for (const slug of slugsToUpdate) {
       try {
         const key = slug.toLowerCase().replace(/^\//, "");
 
@@ -435,101 +515,109 @@ export async function DELETE(req: NextRequest) {
 
   const redis = await getRedisClient();
   const { searchParams } = new URL(req.url);
-  const slug = searchParams.get("slug");
-  const slugs = searchParams.get("slugs");
 
-  if (!slug && !slugs) {
+  let slug = searchParams.get("slug");
+  let slugs = searchParams.get("slugs")
+    ? searchParams
+        .get("slugs")!
+        .split(",")
+        .map((s) => s.trim())
+    : [];
+  let tag = searchParams.get("tag");
+
+  try {
+    const body = await req.json();
+    if (body.slug) slug = body.slug;
+    if (body.slugs) {
+      const bodySlugs = Array.isArray(body.slugs)
+        ? body.slugs
+        : body.slugs.split(",");
+      slugs = [...slugs, ...bodySlugs];
+    }
+    if (body.tag) tag = body.tag;
+  } catch (error) {
+    // Ignore JSON parse error (empty body)
+  }
+
+  if (!slug && slugs.length === 0 && !tag) {
     return NextResponse.json(
-      { error: "slug or slugs parameter required" },
+      { error: "slug, slugs, or tag parameter required" },
       { status: 400 }
     );
   }
 
-  try {
-    if (slug) {
-      const key = slug.toLowerCase().replace(/^\//, "");
-      const exists = await redis.exists(`link:${key}`);
+  const keysToDelete: string[] = [];
 
-      if (!exists) {
-        return NextResponse.json(
-          { error: "link not found", deleted: [] },
-          { status: 404 }
-        );
-      }
-
-      console.log(`Deleting link:${key}`);
-
-      const multi = redis.multi();
-      multi.del(`link:${key}`);
-      multi.del(`count:${key}`);
-      multi.del(`meta:${key}`);
-
-      const results = await multi.exec();
-
-      const keysDeleted = {
-        link: results?.[0] ? 1 : 0,
-        count: results?.[1] ? 1 : 0,
-        meta: results?.[2] ? 1 : 0,
-      };
-
-      console.log(`Deleted link:${key}`, keysDeleted);
-
-      return NextResponse.json({
-        deleted: [key],
-        keysDeleted,
-      });
-    }
-
-    if (slugs) {
-      const slugArray = slugs
-        .split(",")
-        .map((s) => s.trim())
-        .filter((s) => s);
-      const deleted: string[] = [];
-      const notFound: string[] = [];
-
-      const existenceChecks = await Promise.all(
-        slugArray.map(async (s) => {
-          const key = s.toLowerCase().replace(/^\//, "");
-          const exists = await redis.exists(`link:${key}`);
-          return { key, exists: exists > 0 };
-        })
-      );
-
-      const multi = redis.multi();
-      for (const { key, exists } of existenceChecks) {
-        if (exists) {
-          multi.del(`link:${key}`);
-          multi.del(`count:${key}`);
-          multi.del(`meta:${key}`);
-          deleted.push(key);
-        } else {
-          notFound.push(key);
-        }
-      }
-
-      if (deleted.length > 0) {
-        await multi.exec();
-        console.log(`Bulk deleted ${deleted.length} links:`, deleted);
-      }
-
-      return NextResponse.json({
-        deleted,
-        notFound: notFound.length > 0 ? notFound : undefined,
-        summary: {
-          deleted: deleted.length,
-          notFound: notFound.length,
-          total: slugArray.length,
-        },
-      });
-    }
-  } catch (error) {
-    console.error("Error deleting links:", error);
-    return NextResponse.json(
-      { error: "failed to delete links" },
-      { status: 500 }
-    );
+  if (slug) keysToDelete.push(slug.toLowerCase().replace(/^\//, ""));
+  if (slugs.length > 0) {
+    slugs.forEach((s) => keysToDelete.push(s.toLowerCase().replace(/^\//, "")));
   }
 
-  return NextResponse.json({ error: "invalid request" }, { status: 400 });
+  if (tag) {
+    const keys = await redis.keys("link:*");
+    const pipeline = redis.multi();
+    for (const key of keys) {
+      const s = key.replace("link:", "");
+      pipeline.hGetAll(`meta:${s}`);
+    }
+    const metas = await pipeline.exec();
+
+    if (metas) {
+      keys.forEach((key, index) => {
+        const meta = metas[index] as unknown as Record<string, string>;
+        const tags = meta.tags ? meta.tags.split(",").map((t) => t.trim()) : [];
+        if (tags.includes(tag!)) {
+          keysToDelete.push(key.replace("link:", ""));
+        }
+      });
+    }
+  }
+
+  const uniqueKeys = Array.from(new Set(keysToDelete));
+
+  if (uniqueKeys.length === 0) {
+    return NextResponse.json({
+      deleted: [],
+      notFound: [],
+      message: "No matching links found",
+    });
+  }
+
+  const deleted: string[] = [];
+  const notFound: string[] = [];
+  const multi = redis.multi();
+
+  for (const key of uniqueKeys) {
+    multi.exists(`link:${key}`);
+  }
+  const existsResults = await multi.exec();
+
+  const deleteMulti = redis.multi();
+
+  if (existsResults) {
+    uniqueKeys.forEach((key, index) => {
+      if (existsResults[index]) {
+        deleteMulti.del(`link:${key}`);
+        deleteMulti.del(`count:${key}`);
+        deleteMulti.del(`meta:${key}`);
+        deleted.push(key);
+      } else {
+        notFound.push(key);
+      }
+    });
+  }
+
+  if (deleted.length > 0) {
+    await deleteMulti.exec();
+  }
+
+  return NextResponse.json({
+    deleted,
+    notFound,
+    summary: {
+      deleted: deleted.length,
+      notFound: notFound.length,
+      total: uniqueKeys.length,
+    },
+  });
 }
