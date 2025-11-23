@@ -5,6 +5,7 @@ import SearchBar from "./SearchBar";
 import ProjectList from "./ProjectList";
 import ProjectFooter from "./ProjectFooter";
 import TagDirectory from "./TagDirectory";
+import CollectionCard from "./CollectionCard";
 
 interface LinkItem {
     slug: string;
@@ -18,6 +19,15 @@ interface LinkItem {
     createdAt?: string | null;
 }
 
+interface CollectionItem {
+    id: string;
+    name: string;
+    description: string;
+    projects: string[];
+    tags?: string[];
+    createdAt: string | null;
+}
+
 interface SearchResult {
     links: LinkItem[];
     total: number;
@@ -26,9 +36,10 @@ interface SearchResult {
 
 interface SearchableProjectsProps {
     initialLinks: LinkItem[];
+    initialCollections?: CollectionItem[];
 }
 
-export default function SearchableProjects({ initialLinks }: SearchableProjectsProps) {
+export default function SearchableProjects({ initialLinks, initialCollections = [] }: SearchableProjectsProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [sourceFilter, setSourceFilter] = useState<"all" | "manual" | "orcid">("all");
     const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -106,6 +117,68 @@ export default function SearchableProjects({ initialLinks }: SearchableProjectsP
         }
     });
 
+    const collectionsToRender = initialCollections.map(collection => {
+        const matchesCollectionName = searchQuery && (
+            collection.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            collection.description.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+
+        const matchesCollectionTag = selectedTag && collection.tags && collection.tags.some(t => t.toLowerCase() === selectedTag.toLowerCase());
+
+        let collectionProjects: LinkItem[] = [];
+
+        if (matchesCollectionName || matchesCollectionTag) {
+            collectionProjects = initialLinks.filter(link =>
+                collection.projects.includes(link.slug) &&
+                (sourceFilter === 'all' || link.source === sourceFilter) &&
+                (!selectedTag || link.tags?.some(t => t.toLowerCase() === selectedTag.toLowerCase()))
+            );
+        } else {
+            collectionProjects = sortedLinks.filter(link => collection.projects.includes(link.slug));
+        }
+
+        collectionProjects.sort((a, b) => {
+            switch (sortBy) {
+                case "alphabetical-asc":
+                    return (a.title || a.slug).localeCompare(b.title || b.slug);
+                case "alphabetical-desc":
+                    return (b.title || b.slug).localeCompare(a.title || a.slug);
+                case "newest":
+                    if (a.createdAt && b.createdAt) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                    return b.slug.localeCompare(a.slug);
+                case "oldest":
+                    if (a.createdAt && b.createdAt) return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                    return a.slug.localeCompare(b.slug);
+                default:
+                    return 0;
+            }
+        });
+
+        return { ...collection, collectionProjects };
+    })
+        .filter(c => c.collectionProjects.length > 0)
+        .sort((a, b) => {
+            switch (sortBy) {
+                case "alphabetical-asc":
+                    return a.name.localeCompare(b.name);
+                case "alphabetical-desc":
+                    return b.name.localeCompare(a.name);
+                case "newest":
+                    if (a.createdAt && b.createdAt) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                    return b.name.localeCompare(a.name);
+                case "oldest":
+                    if (a.createdAt && b.createdAt) return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                    return a.name.localeCompare(b.name);
+                default:
+                    return 0;
+            }
+        });
+
+    const shownInCollections = new Set<string>();
+    collectionsToRender.forEach(c => c.collectionProjects.forEach(p => shownInCollections.add(p.slug)));
+
+    const standaloneLinks = sortedLinks.filter(link => !shownInCollections.has(link.slug));
+
     const hasOrcid = initialLinks.some(link => link.source === 'orcid');
     const hasManual = initialLinks.some(link => link.source === 'manual');
     const allTags = initialLinks.flatMap(link => link.tags || []);
@@ -172,8 +245,20 @@ export default function SearchableProjects({ initialLinks }: SearchableProjectsP
                 onTagSelect={setSelectedTag}
             />
 
+            {collectionsToRender.map(collection => (
+                <CollectionCard
+                    key={collection.id}
+                    id={collection.id}
+                    name={collection.name}
+                    description={collection.description}
+                    projects={collection.collectionProjects}
+                    tags={collection.tags}
+                    highlights={highlights}
+                />
+            ))}
+
             <ProjectList
-                links={sortedLinks}
+                links={standaloneLinks}
                 isSearching={isSearching || !!searchQuery || sourceFilter !== 'all' || !!selectedTag}
                 highlights={highlights}
             />

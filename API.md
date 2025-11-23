@@ -222,6 +222,56 @@ curl -X DELETE https://your-site.com/api/links \
   }'
 ```
 
+## Collections API
+
+Collections let you group related projects together and expose collection-level metadata (tags). Collections are stored server-side and returned by the app to render grouped project widgets. The UI maintains per-browser collapsed state locally.
+
+### Get all collections
+
+```bash
+curl "https://your-site.com/api/collections" \
+  -H "x-admin-key: your-admin-key"
+```
+
+**Response fields** include `id`, `name`, `description`, `projects` (array of project slugs), `tags` (array), `createdAt`, and `updatedAt`.
+
+### Create a collection (POST)
+
+```bash
+curl -X POST https://your-site.com/api/collections \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "id": "my-collection",
+    "name": "My Collection",
+    "description": "High-level grouping",
+    "projects": ["project-1", "project-2"],
+    "tags": ["featured", "2025"],
+  }'
+```
+
+### Update a collection (PUT)
+
+Supports partial updates — send only the fields you want to change (requires `id`).
+
+```bash
+curl -X PUT https://your-site.com/api/collections \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "id": "my-collection",
+    "name": "Updated collection name",
+    "tags": ["featured","updated"],
+  }'
+```
+
+### Delete a collection
+
+```bash
+curl -X DELETE "https://your-site.com/api/collections?id=my-collection" \
+  -H "x-admin-key: your-admin-key"
+```
+
 ## Directory API
 
 ### Get All Projects (Public)
