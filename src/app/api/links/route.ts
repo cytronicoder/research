@@ -71,6 +71,22 @@ function isValidSlug(slug: string): boolean {
   return /^[a-z0-9-_]+$/i.test(slug);
 }
 
+async function fetchTitleFromUrl(url: string): Promise<string | null> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (!res.ok) return null;
+    const html = await res.text();
+    const match = html.match(/<title>([^<]*)<\/title>/i);
+    return match ? match[1].trim() : null;
+  } catch (error) {
+    console.error(`Failed to fetch title for ${url}:`, error);
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   if (req.headers.get("x-admin-key") !== process.env.ADMIN_KEY)
     return unauthorized();
@@ -95,7 +111,7 @@ export async function POST(req: NextRequest) {
     const origin = new URL(req.url).origin;
 
     for (const link of linksToProcess) {
-      const { slug, target, permanent, title, description, tags } = link;
+      let { slug, target, permanent, title, description, tags } = link;
       if (!slug || !target) {
         results.push({ slug, error: "slug and target required" });
         continue;
@@ -114,6 +130,13 @@ export async function POST(req: NextRequest) {
       if (!/^https?:\/\//i.test(target)) {
         results.push({ slug, error: "target must start with http(s)://" });
         continue;
+      }
+
+      if (!title) {
+        const fetchedTitle = await fetchTitleFromUrl(target);
+        if (fetchedTitle) {
+          title = fetchedTitle;
+        }
       }
 
       try {
@@ -235,12 +258,13 @@ export async function PUT(req: NextRequest) {
       await multi.exec();
 
       const finalTarget = target || (await redis.get(`link:${key}`));
+      const finalMetadata = { ...existingMeta, ...metadata };
 
       results.push({
         slug: key,
         short: `${origin}/${key}`,
         target: finalTarget,
-        ...parseMetadata(metadata),
+        ...parseMetadata(finalMetadata),
       });
     }
 
@@ -329,9 +353,10 @@ export async function GET(req: NextRequest) {
       const s = keys[i].replace("link:", "");
       const target = pipelineResults[i * 3] as unknown as string | null;
       const clicks = pipelineResults[i * 3 + 1] as unknown as string | null;
-      const meta = pipelineResults[i * 3 + 2] as unknown as
-        | Record<string, string>
-        | null;
+      const meta = pipelineResults[i * 3 + 2] as unknown as Record<
+        string,
+        string
+      > | null;
 
       if (!target || !meta) continue;
 
@@ -547,9 +572,7 @@ export async function DELETE(req: NextRequest) {
         const joined = body.slugs.join(",");
         slugsParam = slugsParam ? `${slugsParam},${joined}` : joined;
       } else if (typeof body.slugs === "string") {
-        slugsParam = slugsParam
-          ? `${slugsParam},${body.slugs}`
-          : body.slugs;
+        slugsParam = slugsParam ? `${slugsParam},${body.slugs}` : body.slugs;
       }
     }
 
