@@ -5,6 +5,10 @@ function unauthorized() {
   return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 }
 
+function isValidCollectionId(id: string): boolean {
+  return /^[a-z0-9-_]+$/i.test(id);
+}
+
 export async function GET(req: NextRequest) {
   if (req.headers.get("x-admin-key") !== process.env.ADMIN_KEY) {
     return unauthorized();
@@ -57,6 +61,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!isValidCollectionId(id)) {
+      return NextResponse.json(
+        {
+          error:
+            "id must contain only alphanumeric characters, hyphens, and underscores",
+        },
+        { status: 400 }
+      );
+    }
+
     const redis = await getRedisClient();
     const key = `collection:${id}`;
 
@@ -100,6 +114,16 @@ export async function PUT(req: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ error: "id is required" }, { status: 400 });
+    }
+
+    if (!isValidCollectionId(id)) {
+      return NextResponse.json(
+        {
+          error:
+            "id must contain only alphanumeric characters, hyphens, and underscores",
+        },
+        { status: 400 }
+      );
     }
 
     const redis = await getRedisClient();
@@ -147,6 +171,16 @@ export async function DELETE(req: NextRequest) {
 
   if (!id) {
     return NextResponse.json({ error: "id is required" }, { status: 400 });
+  }
+
+  if (!isValidCollectionId(id)) {
+    return NextResponse.json(
+      {
+        error:
+          "id must contain only alphanumeric characters, hyphens, and underscores",
+      },
+      { status: 400 }
+    );
   }
 
   try {
