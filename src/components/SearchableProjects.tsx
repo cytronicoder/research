@@ -118,12 +118,15 @@ export default function SearchableProjects({ initialLinks, initialCollections = 
     });
 
     const collectionsToRender = initialCollections.map(collection => {
-        const matchesCollectionName = searchQuery && (
+        const hasSearchFilter = searchQuery.length > 0;
+        const hasTagFilter = selectedTag !== null;
+
+        const matchesCollectionName = hasSearchFilter && (
             collection.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             collection.description.toLowerCase().includes(searchQuery.toLowerCase())
         );
 
-        const matchesCollectionTag = selectedTag && collection.tags && collection.tags.some(t => t.toLowerCase() === selectedTag.toLowerCase());
+        const matchesCollectionTag = hasTagFilter && collection.tags && collection.tags.some(t => t.toLowerCase() === selectedTag.toLowerCase());
 
         let collectionProjects: LinkItem[] = [];
 
