@@ -6,6 +6,9 @@ function unauthorized() {
 }
 
 export async function GET(req: NextRequest) {
+  if (req.headers.get("x-admin-key") !== process.env.ADMIN_KEY) {
+    return unauthorized();
+  }
   try {
     const redis = await getRedisClient();
     const keys = await redis.keys("collection:*");
