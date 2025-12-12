@@ -261,7 +261,7 @@ curl -X PUT https://your-site.com/api/collections \
   -d '{
     "id": "my-collection",
     "name": "Updated collection name",
-    "tags": ["featured","updated"],
+    "tags": ["featured","updated"]
   }'
 ```
 
