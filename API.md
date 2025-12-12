@@ -246,7 +246,7 @@ curl -X POST https://your-site.com/api/collections \
     "name": "My Collection",
     "description": "High-level grouping",
     "projects": ["project-1", "project-2"],
-    "tags": ["featured", "2025"],
+    "tags": ["featured", "2025"]
   }'
 ```
 
