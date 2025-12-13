@@ -123,7 +123,16 @@ export async function POST(req: NextRequest) {
     const origin = new URL(req.url).origin;
 
     for (const link of linksToProcess) {
-      let { slug, target, permanent, title, description, tags } = link;
+      let {
+        slug,
+        target,
+        permanent,
+        title,
+        description,
+        tags,
+        startDate,
+        endDate,
+      } = link;
       if (!slug || !target) {
         results.push({ slug, error: "slug and target required" });
         continue;
@@ -166,7 +175,7 @@ export async function POST(req: NextRequest) {
         multi.set(`count:${key}`, "0");
 
         const metadata = prepareMetadata(
-          { permanent, title, description, tags },
+          { permanent, title, description, tags, startDate, endDate },
           false
         );
         multi.hSet(`meta:${key}`, metadata);
@@ -221,7 +230,16 @@ export async function PUT(req: NextRequest) {
     const origin = new URL(req.url).origin;
 
     for (const linkData of linksToProcess) {
-      const { slug, target, permanent, title, description, tags, startDate, endDate } = linkData;
+      const {
+        slug,
+        target,
+        permanent,
+        title,
+        description,
+        tags,
+        startDate,
+        endDate,
+      } = linkData;
 
       if (!slug) {
         results.push({ error: "slug required" });

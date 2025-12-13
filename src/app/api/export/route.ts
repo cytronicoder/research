@@ -80,6 +80,8 @@ export async function GET(req: NextRequest) {
         tags: meta.tags || "",
         source: entrySource,
         permanent: meta.permanent === "1",
+        startDate: meta.startDate || "",
+        endDate: meta.endDate || "",
         createdAt: meta.createdAt || "",
         updatedAt: meta.updatedAt || "",
       };
@@ -106,6 +108,8 @@ export async function GET(req: NextRequest) {
         "tags",
         "source",
         "permanent",
+        "startDate",
+        "endDate",
         "createdAt",
         "updatedAt",
       ];
@@ -153,6 +157,8 @@ export async function GET(req: NextRequest) {
             `tags: ${escapeYamlString(entry.tags)}`,
             `source: ${entry.source}`,
             `permanent: ${entry.permanent}`,
+            `startDate: ${escapeYamlString(entry.startDate)}`,
+            `endDate: ${escapeYamlString(entry.endDate)}`,
             `createdAt: ${escapeYamlString(entry.createdAt)}`,
             `updatedAt: ${escapeYamlString(entry.updatedAt)}`,
           ];
