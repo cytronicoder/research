@@ -221,7 +221,7 @@ export async function PUT(req: NextRequest) {
     const origin = new URL(req.url).origin;
 
     for (const linkData of linksToProcess) {
-      const { slug, target, permanent, title, description, tags } = linkData;
+      const { slug, target, permanent, title, description, tags, startDate, endDate } = linkData;
 
       if (!slug) {
         results.push({ error: "slug required" });
@@ -258,7 +258,7 @@ export async function PUT(req: NextRequest) {
       }
 
       const metadata = prepareMetadata(
-        { permanent, title, description, tags },
+        { permanent, title, description, tags, startDate, endDate },
         true
       );
 
