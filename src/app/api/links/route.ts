@@ -12,6 +12,8 @@ interface LinkMetadata {
   tags: string[];
   createdAt: string | null;
   updatedAt?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
 }
 
 interface LinkData {
@@ -29,6 +31,8 @@ function parseMetadata(meta: Record<string, string>): LinkMetadata {
     tags: meta.tags ? meta.tags.split(",").filter((t) => t.trim()) : [],
     createdAt: meta.createdAt || null,
     updatedAt: meta.updatedAt || null,
+    startDate: meta.startDate || null,
+    endDate: meta.endDate || null,
   };
 }
 
@@ -38,6 +42,8 @@ function prepareMetadata(
     title?: string;
     description?: string;
     tags?: string[] | string;
+    startDate?: string;
+    endDate?: string;
   },
   isUpdate: boolean = false
 ): Record<string, string> {
@@ -56,6 +62,12 @@ function prepareMetadata(
     metadata.tags = Array.isArray(data.tags)
       ? data.tags.filter((t) => t.trim()).join(",")
       : data.tags;
+  }
+  if (data.startDate !== undefined) {
+    metadata.startDate = data.startDate || "";
+  }
+  if (data.endDate !== undefined) {
+    metadata.endDate = data.endDate || "";
   }
 
   if (isUpdate) {
