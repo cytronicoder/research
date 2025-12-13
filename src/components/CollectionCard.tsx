@@ -13,6 +13,8 @@ interface LinkItem {
     tags: string[];
     source: "manual" | "orcid";
     highlights?: string[];
+    startDate?: string | null;
+    endDate?: string | null;
 }
 
 interface CollectionProps {
@@ -22,9 +24,11 @@ interface CollectionProps {
     projects: LinkItem[];
     tags?: string[];
     highlights?: Record<string, string[]>;
+    startDate?: string | null;
+    endDate?: string | null;
 }
 
-export default function CollectionCard({ id, name, description, projects, tags = [], highlights }: CollectionProps) {
+export default function CollectionCard({ id, name, description, projects, tags = [], highlights, startDate, endDate }: CollectionProps) {
     const [isExpanded, setIsExpanded] = useState<boolean>(true);
 
     useEffect(() => {
@@ -38,6 +42,42 @@ export default function CollectionCard({ id, name, description, projects, tags =
     }, [id]);
 
     if (projects.length === 0) return null;
+
+    const extractYear = (dateString: string | null | undefined): string | null => {
+        if (!dateString) return null;
+        return dateString.substring(0, 4);
+    };
+
+    const extractMonth = (dateString: string | null | undefined): string | null => {
+        if (!dateString || dateString.length < 7) return null;
+        const monthNum = parseInt(dateString.substring(5, 7), 10);
+        if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) return null;
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return months[monthNum - 1];
+    };
+
+    const formatDate = (dateString: string | null | undefined, isRange: boolean = false): string | null => {
+        if (!dateString) return null;
+        const year = extractYear(dateString);
+        const month = extractMonth(dateString);
+        const showPresent = isRange && year === new Date().getFullYear().toString() && !month;
+        const formattedYear = year ? (showPresent ? "present" : year) : null;
+        return month && formattedYear ? `${month} ${formattedYear}` : formattedYear;
+    };
+
+    const startDateDisplay = formatDate(startDate);
+    const endDateDisplay = formatDate(endDate);
+
+    let dateDisplay = "";
+    if (startDateDisplay && endDateDisplay && startDateDisplay === endDateDisplay) {
+        dateDisplay = ` (${startDateDisplay})`;
+    } else if (startDateDisplay && endDateDisplay) {
+        dateDisplay = ` (${formatDate(startDate, true)}-${formatDate(endDate, true)})`;
+    } else if (startDateDisplay) {
+        dateDisplay = ` (${startDateDisplay})`;
+    } else if (endDateDisplay) {
+        dateDisplay = ` (${endDateDisplay})`;
+    }
 
     const getProjectTags = (projectTags: string[]) => {
         const merged = [...new Set([...(projectTags || []), ...(tags || [])])];
@@ -64,7 +104,14 @@ export default function CollectionCard({ id, name, description, projects, tags =
             >
                 <div className="flex-1 pr-4">
                     <div className="flex items-center gap-3 mb-2">
-                        <h2 className="text-2xl font-bold" style={{ color: 'var(--text-color)' }}>{name}</h2>
+                        <h2 className="text-2xl font-bold" style={{ color: 'var(--text-color)' }}>
+                            {name}
+                            {dateDisplay && (
+                                <span className="text-lg font-normal ml-2" style={{ color: 'var(--text-color)', opacity: 0.5 }}>
+                                    {dateDisplay}
+                                </span>
+                            )}
+                        </h2>
                         {tags.length > 0 && (
                             <div className="flex gap-2">
                                 {tags.map(tag => (
@@ -101,6 +148,8 @@ export default function CollectionCard({ id, name, description, projects, tags =
                             source={project.source}
                             shortUrl={project.shortUrl}
                             highlights={highlights?.[project.slug]}
+                            startDate={project.startDate}
+                            endDate={project.endDate}
                         />
                     ))}
                 </div>

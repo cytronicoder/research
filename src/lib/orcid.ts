@@ -48,6 +48,8 @@ interface LinkItem {
   source: "manual" | "orcid";
   clicks: number;
   createdAt?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
 }
 
 import { getRedisClient } from "./redis";
@@ -102,6 +104,8 @@ export async function getOrcidWorks(orcidId: string): Promise<LinkItem[]> {
             source: "orcid" as const,
             clicks: Number((await redis.get(`count:${slug}`)) || 0),
             createdAt: storedMeta.createdAt || null,
+            startDate: storedMeta.startDate || work["publication-date"]?.year?.value || null,
+            endDate: storedMeta.endDate || work["publication-date"]?.year?.value || null,
           };
         } else {
           const externalIds = work["external-ids"]?.["external-id"] || [];
@@ -129,6 +133,12 @@ export async function getOrcidWorks(orcidId: string): Promise<LinkItem[]> {
             : [];
           if (tags.length > 0) metadata.tags = tags.join(",");
 
+          const publicationYear = work["publication-date"]?.year?.value;
+          if (publicationYear) {
+            metadata.startDate = publicationYear;
+            metadata.endDate = publicationYear;
+          }
+
           await redis.hSet(`meta:${slug}`, metadata);
 
           return {
@@ -141,6 +151,8 @@ export async function getOrcidWorks(orcidId: string): Promise<LinkItem[]> {
             source: "orcid" as const,
             clicks: 0,
             createdAt: new Date().toISOString(),
+            startDate: publicationYear || null,
+            endDate: publicationYear || null,
           };
         }
       })

@@ -6,7 +6,6 @@ import ProjectFooter from "./ProjectFooter";
 import ProjectList from "./ProjectList";
 import SearchBar from "./SearchBar";
 import TagDirectory from "./TagDirectory";
-import TimelineSlider from "./TimelineSlider";
 
 interface LinkItem {
     slug: string;
@@ -93,31 +92,9 @@ export default function SearchableProjects({ initialLinks, initialCollections = 
         return !isNaN(year) ? year : null;
     }
 
-    // Calculate year range from all projects
-    const yearRange = initialLinks.reduce(
-        (acc, link) => {
-            const startYear = extractYear(link.startDate);
-            const endYear = extractYear(link.endDate);
-
-            if (startYear) acc.min = Math.min(acc.min, startYear);
-            if (endYear) acc.max = Math.max(acc.max, endYear);
-
-            return acc;
-        },
-        { min: Infinity, max: -Infinity }
-    );
-
-    const currentYear = new Date().getFullYear();
-    const minYear = yearRange.min === Infinity ? currentYear : yearRange.min;
-    const maxYear = yearRange.max === -Infinity ? currentYear : yearRange.max;
-
-    const [yearFilterStart, setYearFilterStart] = useState(minYear);
-    const [yearFilterEnd, setYearFilterEnd] = useState(maxYear);
-
-
     useEffect(() => {
         const performSearch = async () => {
-            if (!searchQuery && sourceFilter === 'all' && !selectedTag && yearFilterStart === minYear && yearFilterEnd === maxYear) {
+            if (!searchQuery && sourceFilter === 'all' && !selectedTag) {
                 setFilteredLinks(initialLinks);
                 setHighlights({});
                 return;
@@ -148,18 +125,6 @@ export default function SearchableProjects({ initialLinks, initialCollections = 
                     );
                 }
 
-                filtered = filtered.filter(link => {
-                    if (link.startDate || link.endDate) {
-                        const linkStartYear = extractYear(link.startDate) || minYear;
-                        const linkEndYear = extractYear(link.endDate) || maxYear;
-
-                        if (!(linkStartYear <= yearFilterEnd && linkEndYear >= yearFilterStart)) {
-                            return false;
-                        }
-                    }
-                    return true;
-                });
-
                 setFilteredLinks(filtered);
                 setHighlights({});
             } finally {
@@ -169,7 +134,7 @@ export default function SearchableProjects({ initialLinks, initialCollections = 
 
         const debounceTimer = setTimeout(performSearch, 300);
         return () => clearTimeout(debounceTimer);
-    }, [searchQuery, sourceFilter, selectedTag, yearFilterStart, yearFilterEnd, initialLinks, minYear, maxYear]);
+    }, [searchQuery, sourceFilter, selectedTag, initialLinks]);
 
     const sortedLinks = sortItems(filteredLinks || [], sortBy, "title");
 
@@ -286,16 +251,6 @@ export default function SearchableProjects({ initialLinks, initialCollections = 
                 resultsCount={searchQuery || sourceFilter !== 'all' || selectedTag ? (filteredLinks?.length ?? 0) : undefined}
             />
 
-            {initialLinks.some(link => link.startDate || link.endDate) && (
-                <TimelineSlider
-                    minYear={minYear}
-                    maxYear={maxYear}
-                    startYear={yearFilterStart}
-                    endYear={yearFilterEnd}
-                    onStartChange={setYearFilterStart}
-                    onEndChange={setYearFilterEnd}
-                />
-            )}
             <TagDirectory
                 allTags={allTags}
                 selectedTag={selectedTag}
@@ -311,6 +266,8 @@ export default function SearchableProjects({ initialLinks, initialCollections = 
                     projects={collection.collectionProjects}
                     tags={collection.tags}
                     highlights={highlights}
+                    startDate={collection.startDate}
+                    endDate={collection.endDate}
                 />
             ))}
 

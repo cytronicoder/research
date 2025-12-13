@@ -11,6 +11,8 @@ interface ProjectCardProps {
     source: "manual" | "orcid";
     shortUrl: string;
     highlights?: string[];
+    startDate?: string | null;
+    endDate?: string | null;
 }
 
 function highlightText(text: string, highlights: string[] = []): React.JSX.Element {
@@ -34,6 +36,8 @@ export default function ProjectCard({
     source,
     shortUrl,
     highlights = [],
+    startDate,
+    endDate,
 }: ProjectCardProps) {
     const displayTitle =
         title ||
@@ -41,6 +45,42 @@ export default function ProjectCard({
             .split("-")
             .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
             .join(" ");
+
+    const extractYear = (dateString: string | null | undefined): string | null => {
+        if (!dateString) return null;
+        return dateString.substring(0, 4);
+    };
+
+    const extractMonth = (dateString: string | null | undefined): string | null => {
+        if (!dateString || dateString.length < 7) return null;
+        const monthNum = parseInt(dateString.substring(5, 7), 10);
+        if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) return null;
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return months[monthNum - 1];
+    };
+
+    const formatDate = (dateString: string | null | undefined, isRange: boolean = false): string | null => {
+        if (!dateString) return null;
+        const year = extractYear(dateString);
+        const month = extractMonth(dateString);
+        const showPresent = isRange && year === new Date().getFullYear().toString() && !month;
+        const formattedYear = year ? (showPresent ? "present" : year) : null;
+        return month && formattedYear ? `${month} ${formattedYear}` : formattedYear;
+    };
+
+    const startDateDisplay = formatDate(startDate);
+    const endDateDisplay = formatDate(endDate);
+
+    let dateDisplay = "";
+    if (startDateDisplay && endDateDisplay && startDateDisplay === endDateDisplay) {
+        dateDisplay = ` (${startDateDisplay})`;
+    } else if (startDateDisplay && endDateDisplay) {
+        dateDisplay = ` (${formatDate(startDate, true)}-${formatDate(endDate, true)})`;
+    } else if (startDateDisplay) {
+        dateDisplay = ` (${startDateDisplay})`;
+    } else if (endDateDisplay) {
+        dateDisplay = ` (${endDateDisplay})`;
+    }
 
     return (
         <div className="group block border rounded-lg p-6 hover:shadow-lg hover:-translate-y-1 transition-all duration-200" style={{
@@ -67,6 +107,11 @@ export default function ProjectCard({
                         )}
                         <h2 className="text-xl font-semibold transition-colors" style={{ color: 'var(--text-color)' }}>
                             {highlightText(displayTitle, highlights)}
+                            {dateDisplay && (
+                                <span className="text-base font-normal ml-2" style={{ color: 'var(--text-color)', opacity: 0.5 }}>
+                                    {dateDisplay}
+                                </span>
+                            )}
                         </h2>
                     </div>
                     {description && (

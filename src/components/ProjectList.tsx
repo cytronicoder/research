@@ -8,6 +8,8 @@ interface LinkItem {
     description: string | null;
     tags: string[];
     source: "manual" | "orcid";
+    startDate?: string | null;
+    endDate?: string | null;
 }
 
 interface ProjectListProps {
@@ -46,6 +48,8 @@ export default function ProjectList({ links, isSearching, highlights }: ProjectL
                     source={link.source}
                     shortUrl={link.shortUrl}
                     highlights={highlights?.[link.slug]}
+                    startDate={link.startDate}
+                    endDate={link.endDate}
                 />
             ))}
         </div>

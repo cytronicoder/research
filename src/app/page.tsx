@@ -15,6 +15,8 @@ interface LinkItem {
   source: "manual" | "orcid";
   clicks: number;
   createdAt?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
 }
 
 async function getLinks(): Promise<LinkItem[]> {
@@ -43,6 +45,8 @@ async function getLinks(): Promise<LinkItem[]> {
           source: slug.startsWith("orcid-") ? ("orcid" as const) : ("manual" as const),
           clicks: Number((await redis.get(`count:${slug}`)) || 0),
           createdAt: meta.createdAt || null,
+          startDate: meta.startDate || null,
+          endDate: meta.endDate || null,
         };
       })
     );
