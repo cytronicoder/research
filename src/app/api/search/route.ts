@@ -7,6 +7,8 @@ interface SearchResult {
   title: string | null;
   description: string | null;
   tags: string[];
+  startDate: string | null;
+  endDate: string | null;
   source: "manual" | "orcid";
   score: number;
   highlights: {
@@ -149,6 +151,8 @@ export async function GET(req: NextRequest) {
         title: title || null,
         description: description || null,
         tags: entryTags,
+        startDate: meta.startDate || null,
+        endDate: meta.endDate || null,
         source: entrySource,
         score,
         highlights,

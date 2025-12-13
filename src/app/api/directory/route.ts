@@ -27,6 +27,8 @@ export async function GET(req: NextRequest) {
           title: meta.title || null,
           description: meta.description || null,
           tags: meta.tags ? meta.tags.split(",").filter(Boolean) : [],
+          startDate: meta.startDate || null,
+          endDate: meta.endDate || null,
           createdAt: meta.createdAt || null,
         };
       })
