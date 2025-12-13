@@ -110,6 +110,8 @@ curl -X PUT https://your-site.com/api/links \
 - `description`: Brief description
 - `tags`: Array of tag strings
 - `permanent`: Boolean flag for permanent links (optional)
+- `startDate`: Optional start date for the project (ISO 8601 format)
+- `endDate`: Optional end date for the project (ISO 8601 format)
 
 ### Bulk Operations
 
@@ -119,28 +121,20 @@ To update multiple projects at once:
 
 ```bash
 # Update specific projects
-curl -X PATCH https://your-site.com/api/links \
+curl -X PUT https://your-site.com/api/links \
   -H "Content-Type: application/json" \
   -H "x-admin-key: your-admin-key" \
   -d '{
-    "slugs": ["project-1", "project-2"],
-    "updates": {
-      "tags": ["updated-tag"],
-      "description": "Updated description for all"
-    }
+    "links": [
+      { "slug": "project-1", "description": "Updated desc 1" },
+      { "slug": "project-2", "description": "Updated desc 2" }
+    ]
   }'
 
-# Update all projects with a specific tag
-curl -X PATCH https://your-site.com/api/links \
-  -H "Content-Type: application/json" \
-  -H "x-admin-key: your-admin-key" \
-  -d '{
-    "tag": "old-tag",
-    "updates": {
-      "permanent": true
-    }
-  }'
+# Update all projects with a specific tag (not currently supported - update individually)
 ```
+
+**Note:** Bulk updates by tag are not currently supported. Update projects individually or use the PUT endpoint with an array of links.
 
 #### Bulk Deletion
 
@@ -229,6 +223,26 @@ curl "https://your-site.com/api/links?limit=10&offset=20" \
 ```bash
 curl "https://your-site.com/api/links?slug=project-name" \
   -H "x-admin-key: your-admin-key"
+```
+
+**Response:**
+
+```json
+{
+  "slug": "project-name",
+  "target": "https://example.com/project",
+  "clicks": 42,
+  "metadata": {
+    "permanent": false,
+    "title": "Project Title",
+    "description": "Project description",
+    "tags": ["tag1", "tag2"],
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-02T00:00:00.000Z",
+    "startDate": null,
+    "endDate": null
+  }
+}
 ```
 
 ### Deleting Projects
@@ -399,6 +413,8 @@ curl "https://your-site.com/api/directory?tag=python&source=manual&limit=10"
       "title": "Project Title",
       "description": "Project description",
       "tags": ["tag1", "tag2"],
+      "startDate": null,
+      "endDate": null,
       "createdAt": "2025-01-01T00:00:00.000Z"
     }
   ],
@@ -578,10 +594,13 @@ curl "https://your-site.com/api/search?q=research&limit=5&offset=10" \
 - `offset`: Pagination offset (default: 0)
 
 **Response includes:**
+
 - Ranked results with relevance scores
 - Highlighted search matches
 - Pagination information
 - Applied filters
+
+Each search result includes: `slug`, `target`, `title`, `description`, `tags`, `startDate`, `endDate`, `source`, `score`, and `highlights`.
 
 ## Export API
 
@@ -618,8 +637,11 @@ curl "https://your-site.com/api/export?includeClicks=false" \
 **Other filters:** `tag`, `includeClicks` (boolean)
 
 **JSON Response includes:**
+
 - `export`: Array of exported entries
 - `metadata`: Export information including filters applied
+
+Each exported entry includes: `slug`, `target`, `title`, `description`, `tags`, `source`, `permanent`, `startDate`, `endDate`, `createdAt`, `updatedAt`, and optionally `clicks`.
 
 ## Admin Panel
 
