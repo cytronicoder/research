@@ -5,7 +5,7 @@ interface ProjectFooterProps {
 
 export default function ProjectFooter({
     totalProjects,
-    isSearching,
+    isSearching: _isSearching,
 }: ProjectFooterProps) {
     return (
         <footer className="mt-20 pt-8 border-t text-center" style={{ borderColor: 'var(--card-border)' }}>

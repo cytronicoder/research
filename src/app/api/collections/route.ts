@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
 import { getRedisClient } from "@/lib/redis";
+import { NextRequest, NextResponse } from "next/server";
 
 function unauthorized() {
   return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -154,6 +154,86 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ success: true, id });
   } catch (error) {
     console.error("Error updating collection:", error);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  if (req.headers.get("x-admin-key") !== process.env.ADMIN_KEY) {
+    return unauthorized();
+  }
+
+  try {
+    const body = await req.json();
+    const { id, addProjects, removeProjects } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: "id is required" }, { status: 400 });
+    }
+
+    if (!isValidCollectionId(id)) {
+      return NextResponse.json(
+        {
+          error:
+            "id must contain only alphanumeric characters, hyphens, and underscores",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      (!addProjects || !Array.isArray(addProjects)) &&
+      (!removeProjects || !Array.isArray(removeProjects))
+    ) {
+      return NextResponse.json(
+        { error: "addProjects or removeProjects array is required" },
+        { status: 400 }
+      );
+    }
+
+    const redis = await getRedisClient();
+    const key = `collection:${id}`;
+
+    const exists = await redis.exists(key);
+    if (!exists) {
+      return NextResponse.json(
+        { error: "collection not found" },
+        { status: 404 }
+      );
+    }
+
+    const data = await redis.hGetAll(key);
+    let currentProjects = data.projects
+      ? data.projects.split(",").filter(Boolean)
+      : [];
+
+    if (addProjects && Array.isArray(addProjects)) {
+      const projectsToAdd = addProjects.filter(
+        (p) => p && typeof p === "string"
+      );
+      currentProjects = [...new Set([...currentProjects, ...projectsToAdd])];
+    }
+
+    if (removeProjects && Array.isArray(removeProjects)) {
+      const projectsToRemove = new Set(
+        removeProjects.filter((p) => p && typeof p === "string")
+      );
+      currentProjects = currentProjects.filter((p) => !projectsToRemove.has(p));
+    }
+
+    const updates: Record<string, string> = {
+      projects: currentProjects.join(","),
+      updatedAt: new Date().toISOString(),
+    };
+
+    await redis.hSet(key, updates);
+
+    return NextResponse.json({ success: true, id, projects: currentProjects });
+  } catch (error) {
+    console.error("Error updating collection projects:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }

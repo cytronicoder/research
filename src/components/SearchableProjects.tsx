@@ -28,12 +28,6 @@ interface CollectionItem {
     createdAt: string | null;
 }
 
-interface SearchResult {
-    links: LinkItem[];
-    total: number;
-    highlights?: Record<string, string[]>;
-}
-
 interface SearchableProjectsProps {
     initialLinks: LinkItem[];
     initialCollections?: CollectionItem[];
