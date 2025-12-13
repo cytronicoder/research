@@ -421,113 +421,78 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { updates } = body;
+    const { slug, addTags, removeTags } = body;
 
-    if (!updates) {
+    if (!slug) {
+      return NextResponse.json({ error: "slug required" }, { status: 400 });
+    }
+
+    if (
+      (!addTags || !Array.isArray(addTags)) &&
+      (!removeTags || !Array.isArray(removeTags))
+    ) {
       return NextResponse.json(
-        { error: "updates object required" },
+        { error: "addTags or removeTags array required" },
+        { status: 400 }
+      );
+    }
+
+    const key = slug.toLowerCase().replace(/^\//, "");
+
+    if (!isValidSlug(key)) {
+      return NextResponse.json(
+        {
+          error:
+            "invalid slug format (use only letters, numbers, hyphens, underscores)",
+        },
         { status: 400 }
       );
     }
 
     const redis = await getRedisClient();
-    let slugsToUpdate: string[] = [];
 
-    if (body.slug) slugsToUpdate.push(body.slug);
-    if (body.slugs && Array.isArray(body.slugs))
-      slugsToUpdate.push(...body.slugs);
+    const [exists, existingMeta] = await Promise.all([
+      redis.exists(`link:${key}`),
+      redis.hGetAll(`meta:${key}`),
+    ]);
 
-    if (body.tag) {
-      const keys = await redis.keys("link:*");
-      const pipeline = redis.multi();
-      for (const key of keys) {
-        const s = key.replace("link:", "");
-        pipeline.hGetAll(`meta:${s}`);
-      }
-      const metas = await pipeline.exec();
-
-      if (metas) {
-        keys.forEach((key, index) => {
-          const meta = metas[index] as unknown as Record<string, string>;
-          const tags = meta.tags
-            ? meta.tags.split(",").map((t) => t.trim())
-            : [];
-          if (tags.includes(body.tag)) {
-            slugsToUpdate.push(key.replace("link:", ""));
-          }
-        });
-      }
+    if (!exists || Object.keys(existingMeta).length === 0) {
+      return NextResponse.json({ error: "link not found" }, { status: 404 });
     }
 
-    slugsToUpdate = Array.from(new Set(slugsToUpdate));
+    let currentTags = existingMeta.tags
+      ? existingMeta.tags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : [];
 
-    if (slugsToUpdate.length === 0) {
-      return NextResponse.json(
-        { error: "slug, slugs, or tag required (or no matching links found)" },
-        { status: 400 }
+    if (addTags && Array.isArray(addTags)) {
+      const tagsToAdd = addTags.filter((t) => t && typeof t === "string");
+      currentTags = [...new Set([...currentTags, ...tagsToAdd])];
+    }
+
+    if (removeTags && Array.isArray(removeTags)) {
+      const tagsToRemove = new Set(
+        removeTags.filter((t) => t && typeof t === "string")
       );
+      currentTags = currentTags.filter((t) => !tagsToRemove.has(t));
     }
 
-    const results = [];
+    const updatedMeta = {
+      ...existingMeta,
+      tags: currentTags.join(","),
+      updatedAt: new Date().toISOString(),
+    };
 
-    for (const slug of slugsToUpdate) {
-      try {
-        const key = slug.toLowerCase().replace(/^\//, "");
+    await redis.hSet(`meta:${key}`, updatedMeta);
 
-        const [exists, existingMeta] = await Promise.all([
-          redis.exists(`link:${key}`),
-          redis.hGetAll(`meta:${key}`),
-        ]);
-
-        if (!exists || Object.keys(existingMeta).length === 0) {
-          results.push({ slug: key, error: "not found" });
-          continue;
-        }
-
-        const updatedMeta: Record<string, string> = { ...existingMeta };
-
-        if (updates.title !== undefined) {
-          updatedMeta.title = updates.title || "";
-        }
-        if (updates.description !== undefined) {
-          updatedMeta.description = updates.description || "";
-        }
-        if (updates.tags !== undefined) {
-          updatedMeta.tags = Array.isArray(updates.tags)
-            ? updates.tags.filter((t: string) => t.trim()).join(",")
-            : updates.tags;
-        }
-        if (updates.permanent !== undefined) {
-          updatedMeta.permanent = updates.permanent ? "1" : "0";
-        }
-
-        updatedMeta.updatedAt = new Date().toISOString();
-
-        const multi = redis.multi();
-
-        if (updates.target) {
-          if (!/^https?:\/\//i.test(updates.target)) {
-            results.push({ slug: key, error: "invalid target URL" });
-            continue;
-          }
-          multi.set(`link:${key}`, updates.target);
-        }
-
-        multi.hSet(`meta:${key}`, updatedMeta);
-        await multi.exec();
-
-        results.push({
-          slug: key,
-          updated: true,
-          metadata: parseMetadata(updatedMeta),
-        });
-      } catch (error) {
-        console.error(`Error updating link ${slug}:`, error);
-        results.push({ slug, error: "failed to update" });
-      }
-    }
-
-    return NextResponse.json({ results });
+    return NextResponse.json({
+      slug: key,
+      updated: true,
+      tags: currentTags,
+      metadata: parseMetadata(updatedMeta),
+    });
   } catch (error) {
     console.error("Error in PATCH /api/links:", error);
     return NextResponse.json(
@@ -552,7 +517,6 @@ export async function DELETE(req: NextRequest) {
   try {
     body = await req.json();
   } catch (error) {
-    // Empty body is fine; log only non-JSON errors
     if (!(error instanceof SyntaxError)) {
       console.error("Failed to parse DELETE body:", error);
       return NextResponse.json(
@@ -626,7 +590,6 @@ export async function DELETE(req: NextRequest) {
     );
   }
 
-  // Handle deletion by tag if provided
   if (tag) {
     const keys = await redis.keys("link:*");
     if (keys.length > 0) {

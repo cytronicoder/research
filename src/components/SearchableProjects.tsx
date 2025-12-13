@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import SearchBar from "./SearchBar";
-import ProjectList from "./ProjectList";
+import { useEffect, useState } from "react";
+import CollectionCard from "./CollectionCard";
 import ProjectFooter from "./ProjectFooter";
+import ProjectList from "./ProjectList";
+import SearchBar from "./SearchBar";
 import TagDirectory from "./TagDirectory";
 
 interface LinkItem {
@@ -18,17 +19,60 @@ interface LinkItem {
     createdAt?: string | null;
 }
 
-interface SearchResult {
-    links: LinkItem[];
-    total: number;
-    highlights?: Record<string, string[]>;
+interface CollectionItem {
+    id: string;
+    name: string;
+    description: string;
+    projects: string[];
+    tags?: string[];
+    createdAt: string | null;
 }
 
 interface SearchableProjectsProps {
     initialLinks: LinkItem[];
+    initialCollections?: CollectionItem[];
 }
 
-export default function SearchableProjects({ initialLinks }: SearchableProjectsProps) {
+function sortItems<T extends {
+    title?: string | null;
+    name?: string;
+    slug?: string;
+    createdAt?: string | null;
+}>(items: T[], sortBy: "alphabetical-asc" | "alphabetical-desc" | "newest" | "oldest", nameKey: "title" | "name" = "title"): T[] {
+    return [...items].sort((a, b) => {
+        switch (sortBy) {
+            case "alphabetical-asc": {
+                const nameA = (a[nameKey] || a.slug || "") as string;
+                const nameB = (b[nameKey] || b.slug || "") as string;
+                return nameA.localeCompare(nameB);
+            }
+            case "alphabetical-desc": {
+                const nameA = (a[nameKey] || a.slug || "") as string;
+                const nameB = (b[nameKey] || b.slug || "") as string;
+                return nameB.localeCompare(nameA);
+            }
+            case "newest": {
+                if (a.createdAt && b.createdAt) {
+                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                }
+                const nameB = (b[nameKey] || b.slug || "") as string;
+                return nameB.localeCompare((a[nameKey] || a.slug || "") as string);
+            }
+            case "oldest": {
+                if (a.createdAt && b.createdAt) {
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                }
+                const nameA = (a[nameKey] || a.slug || "") as string;
+                const nameB = (b[nameKey] || b.slug || "") as string;
+                return nameA.localeCompare(nameB);
+            }
+            default:
+                return 0;
+        }
+    });
+}
+
+export default function SearchableProjects({ initialLinks, initialCollections = [] }: SearchableProjectsProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [sourceFilter, setSourceFilter] = useState<"all" | "manual" | "orcid">("all");
     const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -81,30 +125,42 @@ export default function SearchableProjects({ initialLinks }: SearchableProjectsP
         return () => clearTimeout(debounceTimer);
     }, [searchQuery, sourceFilter, selectedTag, initialLinks]);
 
-    const sortedLinks = [...(filteredLinks || [])].sort((a, b) => {
-        switch (sortBy) {
-            case "alphabetical-asc":
-                const titleA = a.title || a.slug;
-                const titleB = b.title || b.slug;
-                return titleA.localeCompare(titleB);
-            case "alphabetical-desc":
-                const titleADesc = a.title || a.slug;
-                const titleBDesc = b.title || b.slug;
-                return titleBDesc.localeCompare(titleADesc);
-            case "newest":
-                if (a.createdAt && b.createdAt) {
-                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-                }
-                return b.slug.localeCompare(a.slug);
-            case "oldest":
-                if (a.createdAt && b.createdAt) {
-                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-                }
-                return a.slug.localeCompare(b.slug);
-            default:
-                return 0;
+    const sortedLinks = sortItems(filteredLinks || [], sortBy, "title");
+
+    const collectionsToRender = initialCollections.map(collection => {
+        const hasSearchFilter = searchQuery.length > 0;
+        const hasTagFilter = selectedTag !== null;
+
+        const matchesCollectionName = hasSearchFilter && (
+            collection.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            collection.description.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+
+        const matchesCollectionTag = hasTagFilter && collection.tags && collection.tags.some(t => t.toLowerCase() === selectedTag.toLowerCase());
+
+        let collectionProjects: LinkItem[] = [];
+
+        if (matchesCollectionName || matchesCollectionTag) {
+            collectionProjects = initialLinks.filter(link =>
+                collection.projects.includes(link.slug) &&
+                (sourceFilter === 'all' || link.source === sourceFilter) &&
+                (!selectedTag || link.tags?.some(t => t.toLowerCase() === selectedTag.toLowerCase()))
+            );
+        } else {
+            collectionProjects = sortedLinks.filter(link => collection.projects.includes(link.slug));
         }
-    });
+
+        collectionProjects = sortItems(collectionProjects, sortBy, "title");
+
+        return { ...collection, collectionProjects };
+    })
+        .filter(c => c.collectionProjects.length > 0)
+        .sort((a, b) => sortItems([a, b], sortBy, "name")[0] === a ? -1 : 1);
+
+    const shownInCollections = new Set<string>();
+    collectionsToRender.forEach(c => c.collectionProjects.forEach(p => shownInCollections.add(p.slug)));
+
+    const standaloneLinks = sortedLinks.filter(link => !shownInCollections.has(link.slug));
 
     const hasOrcid = initialLinks.some(link => link.source === 'orcid');
     const hasManual = initialLinks.some(link => link.source === 'manual');
@@ -172,8 +228,20 @@ export default function SearchableProjects({ initialLinks }: SearchableProjectsP
                 onTagSelect={setSelectedTag}
             />
 
+            {collectionsToRender.map(collection => (
+                <CollectionCard
+                    key={collection.id}
+                    id={collection.id}
+                    name={collection.name}
+                    description={collection.description}
+                    projects={collection.collectionProjects}
+                    tags={collection.tags}
+                    highlights={highlights}
+                />
+            ))}
+
             <ProjectList
-                links={sortedLinks}
+                links={standaloneLinks}
                 isSearching={isSearching || !!searchQuery || sourceFilter !== 'all' || !!selectedTag}
                 highlights={highlights}
             />

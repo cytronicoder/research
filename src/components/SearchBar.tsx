@@ -49,7 +49,7 @@ export default function SearchBar({
                     {searchQuery && (
                         <button
                             onClick={() => onSearchChange("")}
-                            className="absolute inset-y-0 right-0 pr-4 flex items-center"
+                            className="absolute inset-y-0 right-0 pr-4 flex items-center hover:opacity-100 transition-opacity"
                             style={{ color: 'var(--text-color)', opacity: 0.5 }}
                             aria-label="Clear search"
                         >

@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
 import { getRedisClient } from "@/lib/redis";
+import { NextRequest, NextResponse } from "next/server";
 
 interface SearchResult {
   slug: string;
@@ -59,12 +59,19 @@ export async function GET(req: NextRequest) {
     const redis = await getRedisClient();
     const { searchParams } = new URL(req.url);
     const query = searchParams.get("q");
-    const tag = searchParams.get("tag");
+    const tagParam = searchParams.get("tag");
     const source = searchParams.get("source");
     const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 100);
     const offset = parseInt(searchParams.get("offset") || "0");
 
-    if (!query && !tag && !source) {
+    const tags = tagParam
+      ? tagParam
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : [];
+
+    if (!query && tags.length === 0 && !source) {
       return NextResponse.json(
         {
           error:
@@ -102,16 +109,26 @@ export async function GET(req: NextRequest) {
 
       const title = meta.title || "";
       const description = meta.description || "";
-      const tags = meta.tags ? meta.tags.split(",").map((t) => t.trim()) : [];
+      const entryTags = meta.tags
+        ? meta.tags.split(",").map((t) => t.trim())
+        : [];
 
       let entrySource: "manual" | "orcid" = "manual";
       if (slug.startsWith("orcid-")) entrySource = "orcid";
 
       if (source && entrySource !== source) continue;
-      if (tag && !tags.includes(tag)) continue;
+
+      if (tags.length > 0) {
+        const hasMatchingTag = tags.some((searchTag) =>
+          entryTags.some((entryTag) =>
+            entryTag.toLowerCase().includes(searchTag.toLowerCase())
+          )
+        );
+        if (!hasMatchingTag) continue;
+      }
 
       const score = query
-        ? calculateRelevance(query, title, description, tags)
+        ? calculateRelevance(query, title, description, entryTags)
         : 1;
 
       if (query && score === 0) continue;
@@ -120,7 +137,9 @@ export async function GET(req: NextRequest) {
         title: query ? highlightText(title, query) : [],
         description: query ? highlightText(description, query) : [],
         tags: query
-          ? tags.filter((t) => t.toLowerCase().includes(query.toLowerCase()))
+          ? entryTags.filter((t) =>
+              t.toLowerCase().includes(query.toLowerCase())
+            )
           : [],
       };
 
@@ -129,7 +148,7 @@ export async function GET(req: NextRequest) {
         target,
         title: title || null,
         description: description || null,
-        tags,
+        tags: entryTags,
         source: entrySource,
         score,
         highlights,
@@ -144,7 +163,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         query: query || null,
-        filters: { tag, source },
+        filters: { tags: tags.length > 0 ? tags : null, source },
         results: paginatedResults,
         pagination: {
           total,

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { Share2, Copy, Check, Twitter, Linkedin, Facebook } from "lucide-react";
+import { Check, Copy, Facebook, Linkedin, Share2, Twitter } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
 
 interface ShareButtonProps {
     title: string;

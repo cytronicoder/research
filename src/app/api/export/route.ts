@@ -1,8 +1,23 @@
-import { NextRequest, NextResponse } from "next/server";
 import { getRedisClient } from "@/lib/redis";
+import { NextRequest, NextResponse } from "next/server";
 
 function unauthorized() {
   return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+}
+
+function escapeYamlString(str: string): string {
+  if (!str) return '""';
+
+  if (/[:#\[\]{},&*!|>'"%@`\n\r\t\\]/.test(str)) {
+    return `"${str
+      .replace(/\\/g, "\\\\")
+      .replace(/"/g, '\\"')
+      .replace(/\n/g, "\\n")
+      .replace(/\r/g, "\\r")
+      .replace(/\t/g, "\\t")}"`;
+  }
+
+  return `"${str}"`;
 }
 
 export async function GET(req: NextRequest) {
@@ -12,8 +27,10 @@ export async function GET(req: NextRequest) {
   try {
     const redis = await getRedisClient();
     const { searchParams } = new URL(req.url);
-    const format = searchParams.get("format") || "json";
+    const format = (searchParams.get("format") || "json").toLowerCase();
     const source = searchParams.get("source");
+    const tag = searchParams.get("tag");
+    const includeClicks = searchParams.get("includeClicks") !== "false";
 
     const keys = await redis.keys("link:*");
 
@@ -47,18 +64,29 @@ export async function GET(req: NextRequest) {
       if (slug.startsWith("orcid-")) entrySource = "orcid";
 
       if (source && entrySource !== source) continue;
+      if (tag) {
+        const tags = meta.tags ? meta.tags.split(",").map((t) => t.trim()) : [];
+        const hasMatchingTag = tags.some((entryTag) =>
+          entryTag.toLowerCase().includes(tag.toLowerCase())
+        );
+        if (!hasMatchingTag) continue;
+      }
 
-      const entry = {
+      const entry: any = {
         slug,
         target,
         title: meta.title || "",
         description: meta.description || "",
         tags: meta.tags || "",
         source: entrySource,
-        clicks: Number(clicks || 0),
         permanent: meta.permanent === "1",
         createdAt: meta.createdAt || "",
+        updatedAt: meta.updatedAt || "",
       };
+
+      if (includeClicks) {
+        entry.clicks = Number(clicks || 0);
+      }
 
       exportData.push(entry);
     }
@@ -77,10 +105,15 @@ export async function GET(req: NextRequest) {
         "description",
         "tags",
         "source",
-        "clicks",
         "permanent",
         "createdAt",
+        "updatedAt",
       ];
+
+      if (includeClicks) {
+        headers.splice(6, 0, "clicks");
+      }
+
       const csvContent = [
         headers.join(","),
         ...exportData.map((row) =>
@@ -88,7 +121,11 @@ export async function GET(req: NextRequest) {
             .map((header) => {
               const value = row[header as keyof typeof row] || "";
               const stringValue = String(value);
-              if (stringValue.includes(",") || stringValue.includes('"')) {
+              if (
+                stringValue.includes(",") ||
+                stringValue.includes('"') ||
+                stringValue.includes("\n")
+              ) {
                 return `"${stringValue.replace(/"/g, '""')}"`;
               }
               return stringValue;
@@ -105,6 +142,37 @@ export async function GET(req: NextRequest) {
           }.csv"`,
         },
       });
+    } else if (format === "yaml" || format === "yml") {
+      const yamlContent = exportData
+        .map((entry) => {
+          const yamlEntry = [
+            `slug: ${escapeYamlString(entry.slug)}`,
+            `target: ${escapeYamlString(entry.target)}`,
+            `title: ${escapeYamlString(entry.title)}`,
+            `description: ${escapeYamlString(entry.description)}`,
+            `tags: ${escapeYamlString(entry.tags)}`,
+            `source: ${entry.source}`,
+            `permanent: ${entry.permanent}`,
+            `createdAt: ${escapeYamlString(entry.createdAt)}`,
+            `updatedAt: ${escapeYamlString(entry.updatedAt)}`,
+          ];
+
+          if (includeClicks) {
+            yamlEntry.splice(6, 0, `clicks: ${entry.clicks}`);
+          }
+
+          return yamlEntry.join("\n");
+        })
+        .join("\n\n---\n\n");
+
+      return new NextResponse(yamlContent, {
+        headers: {
+          "Content-Type": "application/yaml",
+          "Content-Disposition": `attachment; filename="research-export-${
+            new Date().toISOString().split("T")[0]
+          }.yaml"`,
+        },
+      });
     } else {
       return NextResponse.json({
         export: exportData,
@@ -112,7 +180,11 @@ export async function GET(req: NextRequest) {
           total: exportData.length,
           generatedAt: new Date().toISOString(),
           format: "json",
-          source: source || "all",
+          filters: {
+            source: source || "all",
+            tag: tag || null,
+            includeClicks,
+          },
         },
       });
     }

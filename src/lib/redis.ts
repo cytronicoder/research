@@ -16,7 +16,7 @@ export async function getRedisClient() {
   if (isConnecting && client) {
     let retries = 0;
     while (isConnecting && retries < 50) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       retries++;
     }
     if (client?.isOpen) {

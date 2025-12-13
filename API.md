@@ -151,6 +151,45 @@ curl -X DELETE "https://your-site.com/api/links?slugs=project-1,project-2,projec
   -H "x-admin-key: your-admin-key"
 ```
 
+#### Add/Remove Tags from Individual Links
+
+To add tags to a specific link without replacing existing tags:
+
+```bash
+curl -X PATCH https://your-site.com/api/links \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "slug": "project-name",
+    "addTags": ["new-tag", "another-tag"]
+  }'
+```
+
+To remove tags from a specific link:
+
+```bash
+curl -X PATCH https://your-site.com/api/links \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "slug": "project-name",
+    "removeTags": ["old-tag"]
+  }'
+```
+
+To add and remove tags simultaneously:
+
+```bash
+curl -X PATCH https://your-site.com/api/links \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "slug": "project-name",
+    "addTags": ["new-tag"],
+    "removeTags": ["old-tag"]
+  }'
+```
+
 ### Querying Projects
 
 #### Get All Projects with Filtering
@@ -222,34 +261,159 @@ curl -X DELETE https://your-site.com/api/links \
   }'
 ```
 
+## Collections API
+
+Collections let you group related projects together and expose collection-level metadata (tags). Collections are stored server-side and returned by the app to render grouped project widgets. The UI maintains per-browser collapsed state locally.
+
+### Get all collections
+
+```bash
+curl "https://your-site.com/api/collections" \
+  -H "x-admin-key: your-admin-key"
+```
+
+**Response fields** include `id`, `name`, `description`, `projects` (array of project slugs), `tags` (array), `createdAt`, and `updatedAt`.
+
+### Create a collection (POST)
+
+```bash
+curl -X POST https://your-site.com/api/collections \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "id": "my-collection",
+    "name": "My Collection",
+    "description": "High-level grouping",
+    "projects": ["project-1", "project-2"],
+    "tags": ["featured", "2025"]
+  }'
+```
+
+### Update a collection (PUT)
+
+Supports partial updates — send only the fields you want to change (requires `id`).
+
+```bash
+curl -X PUT https://your-site.com/api/collections \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "id": "my-collection",
+    "name": "Updated collection name",
+    "tags": ["featured","updated"]
+  }'
+```
+
+### Add projects to a collection
+
+To add one or more projects to an existing collection without replacing the entire list:
+
+```bash
+curl -X PATCH https://your-site.com/api/collections \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "id": "my-collection",
+    "addProjects": ["project-1", "project-2"]
+  }'
+```
+
+### Remove projects from a collection
+
+To remove one or more projects from an existing collection:
+
+```bash
+curl -X PATCH https://your-site.com/api/collections \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "id": "my-collection",
+    "removeProjects": ["project-1", "project-2"]
+  }'
+```
+
+### Add and remove projects simultaneously
+
+You can add and remove projects in a single request:
+
+```bash
+curl -X PATCH https://your-site.com/api/collections \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "id": "my-collection",
+    "addProjects": ["new-project"],
+    "removeProjects": ["old-project"]
+  }'
+```
+
+**Note:** The PATCH endpoint modifies the existing projects list without replacing it entirely. Duplicates are automatically removed when adding projects.
+
+### Delete a collection
+
+```bash
+curl -X DELETE "https://your-site.com/api/collections?id=my-collection" \
+  -H "x-admin-key: your-admin-key"
+```
+
 ## Directory API
 
 ### Get All Projects (Public)
 
-Get a public directory of all projects without requiring authentication:
+Get a public directory of all projects without requiring authentication. Supports filtering and pagination:
 
 ```bash
+# Get all projects
 curl "https://your-site.com/api/directory"
+
+# Filter by tag
+curl "https://your-site.com/api/directory?tag=machine-learning"
+
+# Filter by source
+curl "https://your-site.com/api/directory?source=orcid"
+
+# Pagination
+curl "https://your-site.com/api/directory?limit=20&offset=40"
+
+# Combine filters
+curl "https://your-site.com/api/directory?tag=python&source=manual&limit=10"
 ```
+
+**Query Parameters:**
+
+- `tag`: Filter by specific tag
+- `source`: Filter by source (`manual` or `orcid`)
+- `limit`: Maximum number of results (default: 50, max: 200)
+- `offset`: Pagination offset (default: 0)
 
 **Response:**
 
 ```json
-[
-  {
-    "slug": "project-name",
-    "target": "https://example.com/project",
-    "clicks": 42,
-    "shortUrl": "/project-name",
-    "title": "Project Title",
-    "description": "Project description",
-    "tags": ["tag1", "tag2"],
-    "createdAt": "2025-01-01T00:00:00.000Z"
+{
+  "links": [
+    {
+      "slug": "project-name",
+      "target": "https://example.com/project",
+      "clicks": 42,
+      "shortUrl": "/project-name",
+      "title": "Project Title",
+      "description": "Project description",
+      "tags": ["tag1", "tag2"],
+      "createdAt": "2025-01-01T00:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "total": 150,
+    "limit": 20,
+    "offset": 40,
+    "hasMore": true
+  },
+  "filters": {
+    "tag": "python",
+    "source": "manual"
   }
-]
+}
 ```
-
-This endpoint returns all projects sorted by creation date (newest first).
 
 ## ORCID Integration
 
@@ -303,7 +467,7 @@ Returns up to 10 tag suggestions that start with the given prefix.
 To rename a tag:
 
 ```bash
-curl -X PUT https://your-site.com/api/tags \
+curl -X PATCH https://your-site.com/api/tags \
   -H "Content-Type: application/json" \
   -H "x-admin-key: your-admin-key" \
   -d '{
@@ -381,14 +545,22 @@ Returns total links, clicks, source distribution, top performers, recent activit
 
 ## Search API
 
-Advanced search across all entries:
+Advanced search across all entries with support for multiple tags and fuzzy matching:
 
 ```bash
 # Search by query
 curl "https://your-site.com/api/search?q=neural" \
   -H "x-admin-key: your-admin-key"
 
-# Search with filters
+# Search by single tag
+curl "https://your-site.com/api/search?tag=machine-learning" \
+  -H "x-admin-key: your-admin-key"
+
+# Search by multiple tags (comma-separated)
+curl "https://your-site.com/api/search?tag=python,neural-networks" \
+  -H "x-admin-key: your-admin-key"
+
+# Combine search with filters
 curl "https://your-site.com/api/search?q=machine&tag=python&source=manual" \
   -H "x-admin-key: your-admin-key"
 
@@ -399,20 +571,24 @@ curl "https://your-site.com/api/search?q=research&limit=5&offset=10" \
 
 **Query Parameters:**
 
-- `q`: Search query (required if no other filters)
-- `tag`: Filter by specific tag
+- `q`: Search query (searches title, description, and tags)
+- `tag`: Filter by one or more tags (comma-separated, fuzzy matching)
 - `source`: Filter by source (`manual` or `orcid`)
 - `limit`: Maximum results (default: 20, max: 100)
 - `offset`: Pagination offset (default: 0)
 
-Returns ranked results with relevance scores and highlights.
+**Response includes:**
+- Ranked results with relevance scores
+- Highlighted search matches
+- Pagination information
+- Applied filters
 
 ## Export API
 
-Export all your data for backup or migration:
+Export all your data for backup or migration. Supports multiple formats and filtering:
 
 ```bash
-# Export as JSON
+# Export as JSON (default)
 curl "https://your-site.com/api/export" \
   -H "x-admin-key: your-admin-key"
 
@@ -420,13 +596,30 @@ curl "https://your-site.com/api/export" \
 curl "https://your-site.com/api/export?format=csv" \
   -H "x-admin-key: your-admin-key"
 
+# Export as YAML
+curl "https://your-site.com/api/export?format=yaml" \
+  -H "x-admin-key: your-admin-key"
+
 # Export specific source
 curl "https://your-site.com/api/export?source=orcid" \
   -H "x-admin-key: your-admin-key"
+
+# Export by tag
+curl "https://your-site.com/api/export?tag=machine-learning" \
+  -H "x-admin-key: your-admin-key"
+
+# Export without click counts
+curl "https://your-site.com/api/export?includeClicks=false" \
+  -H "x-admin-key: your-admin-key"
 ```
 
-**Formats:** `json`, `csv`
+**Formats:** `json`, `csv`, `yaml`, `yml`
 **Source filters:** `manual`, `orcid`
+**Other filters:** `tag`, `includeClicks` (boolean)
+
+**JSON Response includes:**
+- `export`: Array of exported entries
+- `metadata`: Export information including filters applied
 
 ## Admin Panel
 
