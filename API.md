@@ -265,6 +265,38 @@ curl -X PUT https://your-site.com/api/collections \
   }'
 ```
 
+### Add projects to a collection
+
+To add one or more projects to an existing collection:
+
+```bash
+curl -X PUT https://your-site.com/api/collections \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "id": "my-collection",
+    "projects": ["project-1", "project-2", "project-3"]
+  }'
+```
+
+This replaces the existing projects list. To add projects to the current projects, fetch the collection first, append to the projects array, and then update.
+
+### Remove projects from a collection
+
+To remove all projects from a collection, send an empty array:
+
+```bash
+curl -X PUT https://your-site.com/api/collections \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: your-admin-key" \
+  -d '{
+    "id": "my-collection",
+    "projects": []
+  }'
+```
+
+To remove specific projects, fetch the collection, filter out the projects to remove, and update with the modified list.
+
 ### Delete a collection
 
 ```bash
