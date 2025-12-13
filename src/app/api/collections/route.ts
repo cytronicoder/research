@@ -265,6 +265,13 @@ export async function DELETE(req: NextRequest) {
 
   try {
     const redis = await getRedisClient();
+    const exists = await redis.exists(`collection:${id}`);
+    if (!exists) {
+      return NextResponse.json(
+        { error: "Collection not found" },
+        { status: 404 }
+      );
+    }
     await redis.del(`collection:${id}`);
     return NextResponse.json({ success: true });
   } catch (error) {
