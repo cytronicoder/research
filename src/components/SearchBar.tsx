@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import ThemeToggle from "./ThemeToggle";
 
 interface SearchBarProps {
@@ -14,7 +15,19 @@ export default function SearchBar({
     resultsCount,
 }: SearchBarProps) {
     return (
-        <header className="mb-6">
+        <header className="mb-6 relative">
+            <div className="absolute pointer-events-none z-10" style={{ top: '-60px', right: '60px' }}>
+                <Image
+                    src="/pet.png"
+                    alt="Pet"
+                    width={60}
+                    height={60}
+                    className="drop-shadow-sm"
+                    style={{
+                        filter: 'drop-shadow(0 0 8px rgba(255, 255, 255, 0.5)) drop-shadow(0 0 16px rgba(255, 255, 255, 0.25))'
+                    }}
+                />
+            </div>
             <div className="flex items-center gap-3 mb-3">
                 <div className="flex-1 relative">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
