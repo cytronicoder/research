@@ -14,6 +14,7 @@ interface LinkMetadata {
   updatedAt?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  githubRepo?: string | null;
 }
 
 interface LinkData {
@@ -33,6 +34,7 @@ function parseMetadata(meta: Record<string, string>): LinkMetadata {
     updatedAt: meta.updatedAt || null,
     startDate: meta.startDate || null,
     endDate: meta.endDate || null,
+    githubRepo: meta.githubRepo || null,
   };
 }
 
@@ -44,6 +46,7 @@ function prepareMetadata(
     tags?: string[] | string;
     startDate?: string;
     endDate?: string;
+    githubRepo?: string;
   },
   isUpdate: boolean = false
 ): Record<string, string> {
@@ -68,6 +71,9 @@ function prepareMetadata(
   }
   if (data.endDate !== undefined) {
     metadata.endDate = data.endDate || "";
+  }
+  if (data.githubRepo !== undefined) {
+    metadata.githubRepo = data.githubRepo || "";
   }
 
   if (isUpdate) {
@@ -132,6 +138,7 @@ export async function POST(req: NextRequest) {
         tags,
         startDate,
         endDate,
+        githubRepo,
       } = link;
       if (!slug || !target) {
         results.push({ slug, error: "slug and target required" });
@@ -175,7 +182,7 @@ export async function POST(req: NextRequest) {
         multi.set(`count:${key}`, "0");
 
         const metadata = prepareMetadata(
-          { permanent, title, description, tags, startDate, endDate },
+          { permanent, title, description, tags, startDate, endDate, githubRepo },
           false
         );
         multi.hSet(`meta:${key}`, metadata);
@@ -239,6 +246,7 @@ export async function PUT(req: NextRequest) {
         tags,
         startDate,
         endDate,
+        githubRepo,
       } = linkData;
 
       if (!slug) {
@@ -276,7 +284,7 @@ export async function PUT(req: NextRequest) {
       }
 
       const metadata = prepareMetadata(
-        { permanent, title, description, tags, startDate, endDate },
+        { permanent, title, description, tags, startDate, endDate, githubRepo },
         true
       );
 

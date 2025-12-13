@@ -10,6 +10,7 @@ interface LinkItem {
     source: "manual" | "orcid";
     startDate?: string | null;
     endDate?: string | null;
+    githubRepo?: string | null;
 }
 
 interface ProjectListProps {
@@ -50,6 +51,7 @@ export default function ProjectList({ links, isSearching, highlights }: ProjectL
                     highlights={highlights?.[link.slug]}
                     startDate={link.startDate}
                     endDate={link.endDate}
+                    githubRepo={link.githubRepo}
                 />
             ))}
         </div>

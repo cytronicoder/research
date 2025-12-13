@@ -19,6 +19,7 @@ interface LinkItem {
     createdAt?: string | null;
     startDate?: string | null;
     endDate?: string | null;
+    githubRepo?: string | null;
 }
 
 interface CollectionItem {

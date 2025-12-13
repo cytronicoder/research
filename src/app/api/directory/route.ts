@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
           tags: meta.tags ? meta.tags.split(",").filter(Boolean) : [],
           startDate: meta.startDate || null,
           endDate: meta.endDate || null,
+          githubRepo: meta.githubRepo || null,
           createdAt: meta.createdAt || null,
         };
       })

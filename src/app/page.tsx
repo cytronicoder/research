@@ -17,6 +17,7 @@ interface LinkItem {
   createdAt?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  githubRepo?: string | null;
 }
 
 async function getLinks(): Promise<LinkItem[]> {
@@ -47,6 +48,7 @@ async function getLinks(): Promise<LinkItem[]> {
           createdAt: meta.createdAt || null,
           startDate: meta.startDate || null,
           endDate: meta.endDate || null,
+          githubRepo: meta.githubRepo || null,
         };
       })
     );

@@ -9,6 +9,7 @@ interface SearchResult {
   tags: string[];
   startDate: string | null;
   endDate: string | null;
+  githubRepo: string | null;
   source: "manual" | "orcid";
   score: number;
   highlights: {
@@ -153,6 +154,7 @@ export async function GET(req: NextRequest) {
         tags: entryTags,
         startDate: meta.startDate || null,
         endDate: meta.endDate || null,
+        githubRepo: meta.githubRepo || null,
         source: entrySource,
         score,
         highlights,

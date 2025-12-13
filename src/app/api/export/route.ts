@@ -82,6 +82,7 @@ export async function GET(req: NextRequest) {
         permanent: meta.permanent === "1",
         startDate: meta.startDate || "",
         endDate: meta.endDate || "",
+        githubRepo: meta.githubRepo || "",
         createdAt: meta.createdAt || "",
         updatedAt: meta.updatedAt || "",
       };
@@ -110,6 +111,7 @@ export async function GET(req: NextRequest) {
         "permanent",
         "startDate",
         "endDate",
+        "githubRepo",
         "createdAt",
         "updatedAt",
       ];
@@ -159,6 +161,7 @@ export async function GET(req: NextRequest) {
             `permanent: ${entry.permanent}`,
             `startDate: ${escapeYamlString(entry.startDate)}`,
             `endDate: ${escapeYamlString(entry.endDate)}`,
+            `githubRepo: ${escapeYamlString(entry.githubRepo)}`,
             `createdAt: ${escapeYamlString(entry.createdAt)}`,
             `updatedAt: ${escapeYamlString(entry.updatedAt)}`,
           ];

@@ -112,6 +112,7 @@ curl -X PUT https://your-site.com/api/links \
 - `permanent`: Boolean flag for permanent links (optional)
 - `startDate`: Optional start date for the project (ISO 8601 format)
 - `endDate`: Optional end date for the project (ISO 8601 format)
+- `githubRepo`: Optional GitHub repository URL for the project
 
 ### Bulk Operations
 
@@ -415,6 +416,7 @@ curl "https://your-site.com/api/directory?tag=python&source=manual&limit=10"
       "tags": ["tag1", "tag2"],
       "startDate": null,
       "endDate": null,
+      "githubRepo": "https://github.com/user/repo",
       "createdAt": "2025-01-01T00:00:00.000Z"
     }
   ],
@@ -600,7 +602,7 @@ curl "https://your-site.com/api/search?q=research&limit=5&offset=10" \
 - Pagination information
 - Applied filters
 
-Each search result includes: `slug`, `target`, `title`, `description`, `tags`, `startDate`, `endDate`, `source`, `score`, and `highlights`.
+Each search result includes: `slug`, `target`, `title`, `description`, `tags`, `startDate`, `endDate`, `githubRepo`, `source`, `score`, and `highlights`.
 
 ## Export API
 
@@ -641,7 +643,7 @@ curl "https://your-site.com/api/export?includeClicks=false" \
 - `export`: Array of exported entries
 - `metadata`: Export information including filters applied
 
-Each exported entry includes: `slug`, `target`, `title`, `description`, `tags`, `source`, `permanent`, `startDate`, `endDate`, `createdAt`, `updatedAt`, and optionally `clicks`.
+Each exported entry includes: `slug`, `target`, `title`, `description`, `tags`, `source`, `permanent`, `startDate`, `endDate`, `githubRepo`, `createdAt`, `updatedAt`, and optionally `clicks`.
 
 ## Admin Panel
 
