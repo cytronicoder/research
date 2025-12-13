@@ -121,7 +121,7 @@ export default function ProjectCard({
                     )}
                     {tags && tags.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-3">
-                            {tags.map((tag) => (
+                            {[...tags].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())).map((tag) => (
                                 <span
                                     key={tag}
                                     className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
