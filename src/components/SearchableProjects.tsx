@@ -6,6 +6,7 @@ import ProjectFooter from "./ProjectFooter";
 import ProjectList from "./ProjectList";
 import SearchBar from "./SearchBar";
 import TagDirectory from "./TagDirectory";
+import TimelineSlider from "./TimelineSlider";
 
 interface LinkItem {
     slug: string;
@@ -17,6 +18,8 @@ interface LinkItem {
     source: "manual" | "orcid";
     clicks: number;
     createdAt?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
 }
 
 interface CollectionItem {
@@ -26,6 +29,8 @@ interface CollectionItem {
     projects: string[];
     tags?: string[];
     createdAt: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
 }
 
 interface SearchableProjectsProps {
@@ -81,9 +86,38 @@ export default function SearchableProjects({ initialLinks, initialCollections = 
     const [highlights, setHighlights] = useState<Record<string, string[]>>({});
     const [sortBy, setSortBy] = useState<"alphabetical-asc" | "alphabetical-desc" | "newest" | "oldest">("alphabetical-asc");
 
+    // Extract year from date string (format: "2024" or "2024-01-15")
+    function extractYear(dateString: string | null | undefined): number | null {
+        if (!dateString) return null;
+        const year = parseInt(dateString.substring(0, 4), 10);
+        return !isNaN(year) ? year : null;
+    }
+
+    // Calculate year range from all projects
+    const yearRange = initialLinks.reduce(
+        (acc, link) => {
+            const startYear = extractYear(link.startDate);
+            const endYear = extractYear(link.endDate);
+
+            if (startYear) acc.min = Math.min(acc.min, startYear);
+            if (endYear) acc.max = Math.max(acc.max, endYear);
+
+            return acc;
+        },
+        { min: Infinity, max: -Infinity }
+    );
+
+    const currentYear = new Date().getFullYear();
+    const minYear = yearRange.min === Infinity ? currentYear : yearRange.min;
+    const maxYear = yearRange.max === -Infinity ? currentYear : yearRange.max;
+
+    const [yearFilterStart, setYearFilterStart] = useState(minYear);
+    const [yearFilterEnd, setYearFilterEnd] = useState(maxYear);
+
+
     useEffect(() => {
         const performSearch = async () => {
-            if (!searchQuery && sourceFilter === 'all' && !selectedTag) {
+            if (!searchQuery && sourceFilter === 'all' && !selectedTag && yearFilterStart === minYear && yearFilterEnd === maxYear) {
                 setFilteredLinks(initialLinks);
                 setHighlights({});
                 return;
@@ -114,6 +148,18 @@ export default function SearchableProjects({ initialLinks, initialCollections = 
                     );
                 }
 
+                filtered = filtered.filter(link => {
+                    if (link.startDate || link.endDate) {
+                        const linkStartYear = extractYear(link.startDate) || minYear;
+                        const linkEndYear = extractYear(link.endDate) || maxYear;
+
+                        if (!(linkStartYear <= yearFilterEnd && linkEndYear >= yearFilterStart)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+
                 setFilteredLinks(filtered);
                 setHighlights({});
             } finally {
@@ -123,7 +169,7 @@ export default function SearchableProjects({ initialLinks, initialCollections = 
 
         const debounceTimer = setTimeout(performSearch, 300);
         return () => clearTimeout(debounceTimer);
-    }, [searchQuery, sourceFilter, selectedTag, initialLinks]);
+    }, [searchQuery, sourceFilter, selectedTag, yearFilterStart, yearFilterEnd, initialLinks, minYear, maxYear]);
 
     const sortedLinks = sortItems(filteredLinks || [], sortBy, "title");
 
@@ -152,7 +198,25 @@ export default function SearchableProjects({ initialLinks, initialCollections = 
 
         collectionProjects = sortItems(collectionProjects, sortBy, "title");
 
-        return { ...collection, collectionProjects };
+        let collectionStartDate = collection.startDate;
+        let collectionEndDate = collection.endDate;
+
+        if (collectionProjects.length > 0) {
+            const years = collectionProjects
+                .map(p => [extractYear(p.startDate), extractYear(p.endDate)])
+                .filter(([s, e]) => s || e)
+                .flat()
+                .filter((y): y is number => y !== null);
+
+            if (years.length > 0) {
+                const minCollectionYear = Math.min(...years);
+                const maxCollectionYear = Math.max(...years);
+                collectionStartDate = minCollectionYear.toString();
+                collectionEndDate = maxCollectionYear.toString();
+            }
+        }
+
+        return { ...collection, collectionProjects, startDate: collectionStartDate, endDate: collectionEndDate };
     })
         .filter(c => c.collectionProjects.length > 0)
         .sort((a, b) => sortItems([a, b], sortBy, "name")[0] === a ? -1 : 1);
@@ -222,6 +286,16 @@ export default function SearchableProjects({ initialLinks, initialCollections = 
                 resultsCount={searchQuery || sourceFilter !== 'all' || selectedTag ? (filteredLinks?.length ?? 0) : undefined}
             />
 
+            {initialLinks.some(link => link.startDate || link.endDate) && (
+                <TimelineSlider
+                    minYear={minYear}
+                    maxYear={maxYear}
+                    startYear={yearFilterStart}
+                    endYear={yearFilterEnd}
+                    onStartChange={setYearFilterStart}
+                    onEndChange={setYearFilterEnd}
+                />
+            )}
             <TagDirectory
                 allTags={allTags}
                 selectedTag={selectedTag}
