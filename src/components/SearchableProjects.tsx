@@ -33,6 +33,45 @@ interface SearchableProjectsProps {
     initialCollections?: CollectionItem[];
 }
 
+function sortItems<T extends {
+    title?: string | null;
+    name?: string;
+    slug?: string;
+    createdAt?: string | null;
+}>(items: T[], sortBy: "alphabetical-asc" | "alphabetical-desc" | "newest" | "oldest", nameKey: "title" | "name" = "title"): T[] {
+    return [...items].sort((a, b) => {
+        switch (sortBy) {
+            case "alphabetical-asc": {
+                const nameA = (a[nameKey] || a.slug || "") as string;
+                const nameB = (b[nameKey] || b.slug || "") as string;
+                return nameA.localeCompare(nameB);
+            }
+            case "alphabetical-desc": {
+                const nameA = (a[nameKey] || a.slug || "") as string;
+                const nameB = (b[nameKey] || b.slug || "") as string;
+                return nameB.localeCompare(nameA);
+            }
+            case "newest": {
+                if (a.createdAt && b.createdAt) {
+                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                }
+                const nameB = (b[nameKey] || b.slug || "") as string;
+                return nameB.localeCompare((a[nameKey] || a.slug || "") as string);
+            }
+            case "oldest": {
+                if (a.createdAt && b.createdAt) {
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                }
+                const nameA = (a[nameKey] || a.slug || "") as string;
+                const nameB = (b[nameKey] || b.slug || "") as string;
+                return nameA.localeCompare(nameB);
+            }
+            default:
+                return 0;
+        }
+    });
+}
+
 export default function SearchableProjects({ initialLinks, initialCollections = [] }: SearchableProjectsProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [sourceFilter, setSourceFilter] = useState<"all" | "manual" | "orcid">("all");
@@ -86,30 +125,7 @@ export default function SearchableProjects({ initialLinks, initialCollections = 
         return () => clearTimeout(debounceTimer);
     }, [searchQuery, sourceFilter, selectedTag, initialLinks]);
 
-    const sortedLinks = [...(filteredLinks || [])].sort((a, b) => {
-        switch (sortBy) {
-            case "alphabetical-asc":
-                const titleA = a.title || a.slug;
-                const titleB = b.title || b.slug;
-                return titleA.localeCompare(titleB);
-            case "alphabetical-desc":
-                const titleADesc = a.title || a.slug;
-                const titleBDesc = b.title || b.slug;
-                return titleBDesc.localeCompare(titleADesc);
-            case "newest":
-                if (a.createdAt && b.createdAt) {
-                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-                }
-                return b.slug.localeCompare(a.slug);
-            case "oldest":
-                if (a.createdAt && b.createdAt) {
-                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-                }
-                return a.slug.localeCompare(b.slug);
-            default:
-                return 0;
-        }
-    });
+    const sortedLinks = sortItems(filteredLinks || [], sortBy, "title");
 
     const collectionsToRender = initialCollections.map(collection => {
         const hasSearchFilter = searchQuery.length > 0;
@@ -134,42 +150,12 @@ export default function SearchableProjects({ initialLinks, initialCollections = 
             collectionProjects = sortedLinks.filter(link => collection.projects.includes(link.slug));
         }
 
-        collectionProjects.sort((a, b) => {
-            switch (sortBy) {
-                case "alphabetical-asc":
-                    return (a.title || a.slug).localeCompare(b.title || b.slug);
-                case "alphabetical-desc":
-                    return (b.title || b.slug).localeCompare(a.title || a.slug);
-                case "newest":
-                    if (a.createdAt && b.createdAt) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-                    return b.slug.localeCompare(a.slug);
-                case "oldest":
-                    if (a.createdAt && b.createdAt) return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-                    return a.slug.localeCompare(b.slug);
-                default:
-                    return 0;
-            }
-        });
+        collectionProjects = sortItems(collectionProjects, sortBy, "title");
 
         return { ...collection, collectionProjects };
     })
         .filter(c => c.collectionProjects.length > 0)
-        .sort((a, b) => {
-            switch (sortBy) {
-                case "alphabetical-asc":
-                    return a.name.localeCompare(b.name);
-                case "alphabetical-desc":
-                    return b.name.localeCompare(a.name);
-                case "newest":
-                    if (a.createdAt && b.createdAt) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-                    return b.name.localeCompare(a.name);
-                case "oldest":
-                    if (a.createdAt && b.createdAt) return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-                    return a.name.localeCompare(b.name);
-                default:
-                    return 0;
-            }
-        });
+        .sort((a, b) => sortItems([a, b], sortBy, "name")[0] === a ? -1 : 1);
 
     const shownInCollections = new Set<string>();
     collectionsToRender.forEach(c => c.collectionProjects.forEach(p => shownInCollections.add(p.slug)));
