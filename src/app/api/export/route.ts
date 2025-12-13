@@ -5,6 +5,21 @@ function unauthorized() {
   return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 }
 
+function escapeYamlString(str: string): string {
+  if (!str) return '""';
+
+  if (/[:#\[\]{},&*!|>'"%@`\n\r\t\\]/.test(str)) {
+    return `"${str
+      .replace(/\\/g, "\\\\")
+      .replace(/"/g, '\\"')
+      .replace(/\n/g, "\\n")
+      .replace(/\r/g, "\\r")
+      .replace(/\t/g, "\\t")}"`;
+  }
+
+  return `"${str}"`;
+}
+
 export async function GET(req: NextRequest) {
   if (req.headers.get("x-admin-key") !== process.env.ADMIN_KEY)
     return unauthorized();
@@ -131,15 +146,15 @@ export async function GET(req: NextRequest) {
       const yamlContent = exportData
         .map((entry) => {
           const yamlEntry = [
-            `slug: "${entry.slug}"`,
-            `target: "${entry.target}"`,
-            `title: "${entry.title}"`,
-            `description: "${entry.description}"`,
-            `tags: "${entry.tags}"`,
+            `slug: ${escapeYamlString(entry.slug)}`,
+            `target: ${escapeYamlString(entry.target)}`,
+            `title: ${escapeYamlString(entry.title)}`,
+            `description: ${escapeYamlString(entry.description)}`,
+            `tags: ${escapeYamlString(entry.tags)}`,
             `source: ${entry.source}`,
             `permanent: ${entry.permanent}`,
-            `createdAt: "${entry.createdAt}"`,
-            `updatedAt: "${entry.updatedAt}"`,
+            `createdAt: ${escapeYamlString(entry.createdAt)}`,
+            `updatedAt: ${escapeYamlString(entry.updatedAt)}`,
           ];
 
           if (includeClicks) {
