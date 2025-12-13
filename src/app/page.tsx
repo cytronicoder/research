@@ -1,6 +1,6 @@
-import { getRedisClient } from "@/lib/redis";
 import SearchableProjects from "@/components/SearchableProjects";
 import { getOrcidWorks } from "@/lib/orcid";
+import { getRedisClient } from "@/lib/redis";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;

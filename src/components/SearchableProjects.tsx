@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import SearchBar from "./SearchBar";
-import ProjectList from "./ProjectList";
-import ProjectFooter from "./ProjectFooter";
-import TagDirectory from "./TagDirectory";
+import { useEffect, useState } from "react";
 import CollectionCard from "./CollectionCard";
+import ProjectFooter from "./ProjectFooter";
+import ProjectList from "./ProjectList";
+import SearchBar from "./SearchBar";
+import TagDirectory from "./TagDirectory";
 
 interface LinkItem {
     slug: string;

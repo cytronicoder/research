@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 
 interface ApiLinkItem {
     slug: string;
@@ -481,13 +481,13 @@ export default function AdminDashboard() {
                             onClick={handleLogout}
                             className="px-4 py-2 text-sm font-medium border rounded-lg transition-colors"
                             style={{
-                            color: 'var(--text-color)',
-                            backgroundColor: 'var(--card-bg)',
-                            borderColor: 'var(--card-border)'
-                        }}
-                    >
-                        Logout
-                    </button>
+                                color: 'var(--text-color)',
+                                backgroundColor: 'var(--card-bg)',
+                                borderColor: 'var(--card-border)'
+                            }}
+                        >
+                            Logout
+                        </button>
                     </div>
                 </header>
 
