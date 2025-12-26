@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { PhotoSet } from "@/lib/conferenceSlides";
 import CollectionCard from "./CollectionCard";
 import ProjectFooter from "./ProjectFooter";
 import ProjectList from "./ProjectList";
@@ -20,6 +21,7 @@ interface LinkItem {
     startDate?: string | null;
     endDate?: string | null;
     githubRepo?: string | null;
+    photoSet?: PhotoSet | null;
 }
 
 interface CollectionItem {
@@ -31,6 +33,7 @@ interface CollectionItem {
     createdAt: string | null;
     startDate?: string | null;
     endDate?: string | null;
+    photoSet?: PhotoSet | null;
 }
 
 interface SearchableProjectsProps {
@@ -272,6 +275,7 @@ export default function SearchableProjects({ initialLinks, initialCollections = 
                     highlights={highlights}
                     startDate={collection.startDate}
                     endDate={collection.endDate}
+                    photoSet={collection.photoSet}
                 />
             ))}
 

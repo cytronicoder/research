@@ -1,6 +1,8 @@
 import SearchableProjects from "@/components/SearchableProjects";
 import { getOrcidWorks } from "@/lib/orcid";
 import { getRedisClient } from "@/lib/redis";
+import { getPhotoSet } from "@/lib/conferenceSlides";
+import type { PhotoSet } from "@/lib/conferenceSlides";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -18,6 +20,7 @@ interface LinkItem {
   startDate?: string | null;
   endDate?: string | null;
   githubRepo?: string | null;
+  photoSet?: PhotoSet;
 }
 
 async function getLinks(): Promise<LinkItem[]> {
@@ -36,7 +39,7 @@ async function getLinks(): Promise<LinkItem[]> {
         const target = await redis.get(key);
         const meta = await redis.hGetAll(`meta:${slug}`);
 
-        return {
+        const link: any = {
           slug,
           target: target || "",
           shortUrl: `/${slug}`,
@@ -50,12 +53,17 @@ async function getLinks(): Promise<LinkItem[]> {
           endDate: meta.endDate || null,
           githubRepo: meta.githubRepo || null,
         };
+
+        const ps: PhotoSet | undefined = getPhotoSet(slug);
+        if (ps) link.photoSet = ps;
+
+        return link;
       })
     );
 
-    const manualLinks = links.filter(link => link.source === "manual");
+    const manualLinks = links.filter((link: any) => link.source === "manual");
 
-    return manualLinks;
+    return manualLinks as LinkItem[];
   } catch (error) {
     console.error("Error fetching links:", error);
     return [];
@@ -69,6 +77,7 @@ interface CollectionItem {
   projects: string[];
   tags?: string[];
   createdAt: string | null;
+  photoSet?: PhotoSet;
 }
 
 async function getCollections(): Promise<CollectionItem[]> {
@@ -84,7 +93,7 @@ async function getCollections(): Promise<CollectionItem[]> {
       keys.map(async (key) => {
         const id = key.replace("collection:", "");
         const data = await redis.hGetAll(key);
-        return {
+        const coll: any = {
           id,
           name: data.name || "",
           description: data.description || "",
@@ -92,10 +101,15 @@ async function getCollections(): Promise<CollectionItem[]> {
           tags: data.tags ? data.tags.split(",").filter(Boolean) : [],
           createdAt: data.createdAt || null,
         };
+
+        const ps: PhotoSet | undefined = getPhotoSet(id);
+        if (ps) coll.photoSet = ps;
+
+        return coll;
       })
     );
 
-    return collections;
+    return collections as CollectionItem[];
   } catch (error) {
     console.error("Error fetching collections:", error);
     return [];

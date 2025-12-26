@@ -1,0 +1,25 @@
+# Photo sets keyed by slug or collection id (case-insensitive)
+# date should be in ISO format (YYYY-MM-DD) so sorting works reliably.
+
+biorsp:
+  slides:
+    - src: "/biorsp/bcb.jpeg"
+      alt: "Presenting at ACM BCB"
+      caption: "Poster presentation at ACM BCB 2025"
+      date: "October 2025"
+    - src: "/biorsp/ismb.jpeg"
+      alt: "ISMB talk"
+      caption: "Poster presentation at ISMB/ECCB 2025"
+      date: "July 2025"
+    - src: "/biorsp/ieeebhi.jpeg"
+      alt: "IEEE BHI keynote"
+      caption: "Presenting at IEEE BHI 2024"
+      date: "November 2024"
+    - src: "/biorsp/icibm.jpeg"
+      alt: "ICIBM presentation"
+      caption: "Presenting at ICIBM 2024"
+      date: "October 2024"
+    - src: "/biorsp/giw.jpeg"
+      alt: "GIW workshop"
+      caption: "Presenting at GIW Workshop 2023"
+      date: "November 2023"

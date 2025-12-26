@@ -3,6 +3,8 @@
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useEffect, useState } from "react";
 import ProjectCard from "./ProjectCard";
+import ConferenceCarousel from "./ConferenceCarousel";
+import type { PhotoSet } from "@/lib/conferenceSlides";
 
 interface LinkItem {
     slug: string;
@@ -26,9 +28,10 @@ interface CollectionProps {
     highlights?: Record<string, string[]>;
     startDate?: string | null;
     endDate?: string | null;
+    photoSet?: PhotoSet | null;
 }
 
-export default function CollectionCard({ id, name, description, projects, tags = [], highlights, startDate, endDate }: CollectionProps) {
+export default function CollectionCard({ id, name, description, projects, tags = [], highlights, startDate, endDate, photoSet }: CollectionProps) {
     const [isExpanded, setIsExpanded] = useState<boolean>(true);
 
     useEffect(() => {
@@ -40,6 +43,10 @@ export default function CollectionCard({ id, name, description, projects, tags =
             console.error("Error reading collection expanded state:", e);
         }
     }, [id]);
+
+    // photo set provided from server via props
+    const collectionPhotoSet = photoSet;
+    const collectionSlides = collectionPhotoSet?.slides;
 
     if (projects.length === 0) return null;
 
@@ -136,22 +143,31 @@ export default function CollectionCard({ id, name, description, projects, tags =
             </div>
 
             {isExpanded && (
-                <div className="p-6 pt-0 grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                    {projects.map((project) => (
-                        <ProjectCard
-                            key={project.slug}
-                            slug={project.slug}
-                            target={project.target}
-                            title={project.title}
-                            description={project.description}
-                            tags={getProjectTags(project.tags)}
-                            source={project.source}
-                            shortUrl={project.shortUrl}
-                            highlights={highlights?.[project.slug]}
-                            startDate={project.startDate}
-                            endDate={project.endDate}
-                        />
-                    ))}
+                <div>
+                    {/* Show collection-specific content (e.g., carousel for bioRSP) */}
+                    {collectionSlides && collectionSlides.length > 0 && (
+                        <div className="px-6 pt-0 pb-4">
+                            <ConferenceCarousel slides={collectionSlides} />
+                        </div>
+                    )}
+
+                    <div className="p-6 pt-0 grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                        {projects.map((project) => (
+                            <ProjectCard
+                                key={project.slug}
+                                slug={project.slug}
+                                target={project.target}
+                                title={project.title}
+                                description={project.description}
+                                tags={getProjectTags(project.tags)}
+                                source={project.source}
+                                shortUrl={project.shortUrl}
+                                highlights={highlights?.[project.slug]}
+                                startDate={project.startDate}
+                                endDate={project.endDate}
+                            />
+                        ))}
+                    </div>
                 </div>
             )}
         </div>

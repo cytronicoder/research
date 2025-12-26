@@ -1,4 +1,8 @@
+"use client";
+
 import ProjectCard from "./ProjectCard";
+import ConferenceCarousel from "./ConferenceCarousel";
+import type { PhotoSet } from "@/lib/conferenceSlides";
 
 interface LinkItem {
     slug: string;
@@ -11,6 +15,7 @@ interface LinkItem {
     startDate?: string | null;
     endDate?: string | null;
     githubRepo?: string | null;
+    photoSet?: PhotoSet | null;
 }
 
 interface ProjectListProps {
@@ -38,22 +43,30 @@ export default function ProjectList({ links, isSearching, highlights }: ProjectL
 
     return (
         <div className="space-y-4">
-            {links.map((link) => (
-                <ProjectCard
-                    key={link.slug}
-                    slug={link.slug}
-                    target={link.target}
-                    title={link.title}
-                    description={link.description}
-                    tags={link.tags}
-                    source={link.source}
-                    shortUrl={link.shortUrl}
-                    highlights={highlights?.[link.slug]}
-                    startDate={link.startDate}
-                    endDate={link.endDate}
-                    githubRepo={link.githubRepo}
-                />
-            ))}
+            {links.map((link) => {
+                const photoSet = link.photoSet;
+                const slides = photoSet?.slides;
+                return slides && slides.length > 0 ? (
+                    <div key={link.slug}>
+                        <ConferenceCarousel slides={slides} />
+                    </div>
+                ) : (
+                    <ProjectCard
+                        key={link.slug}
+                        slug={link.slug}
+                        target={link.target}
+                        title={link.title}
+                        description={link.description}
+                        tags={link.tags}
+                        source={link.source}
+                        shortUrl={link.shortUrl}
+                        highlights={highlights?.[link.slug]}
+                        startDate={link.startDate}
+                        endDate={link.endDate}
+                        githubRepo={link.githubRepo}
+                    />
+                );
+            })}
         </div>
     );
 }
