@@ -196,6 +196,9 @@ export default function SearchableProjects({ initialLinks, initialCollections = 
     const hasManual = initialLinks.some(link => link.source === 'manual');
     const allTags = initialLinks.flatMap(link => link.tags || []);
 
+    const anyResults = collectionsToRender.length > 0 || standaloneLinks.length > 0;
+    const listIsSearching = (isSearching || !!searchQuery || sourceFilter !== 'all' || !!selectedTag) && !anyResults;
+
     return (
         <>
             {hasOrcid && hasManual && (
@@ -272,9 +275,10 @@ export default function SearchableProjects({ initialLinks, initialCollections = 
                 />
             ))}
 
+            {/* Only show 'no projects found' message when there are no results overall */}
             <ProjectList
                 links={standaloneLinks}
-                isSearching={isSearching || !!searchQuery || sourceFilter !== 'all' || !!selectedTag}
+                isSearching={listIsSearching}
                 highlights={highlights}
             />
 
