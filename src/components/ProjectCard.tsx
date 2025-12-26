@@ -97,15 +97,8 @@ export default function ProjectCard({
                     className="flex-1 min-w-0"
                 >
                     <div className="flex items-center gap-3 mb-2">
-                        {source === 'orcid' ? (
+                        {source === 'orcid' && (
                             <Image src="/orcid.svg" alt="ORCID" width={20} height={20} style={{ filter: 'var(--icon-filter, none)' }} />
-                        ) : (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style={{
-                                backgroundColor: 'var(--badge-bg)',
-                                color: 'var(--badge-text)'
-                            }}>
-                                Manual
-                            </span>
                         )}
                         <h2 className="text-xl font-semibold transition-colors" style={{ color: 'var(--text-color)' }}>
                             {highlightText(displayTitle, highlights)}
